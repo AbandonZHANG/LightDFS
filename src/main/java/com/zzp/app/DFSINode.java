@@ -10,7 +10,6 @@ import java.util.Iterator;
 public class DFSINode implements Serializable {
     String name;    // 文件or目录名称
     HashMap<String, DFSINode> childInode;   // childInode == null 表示该节点是文件, childInode != null 表示该节点是目录
-
     /**
      * @param inode
      * @param depth
@@ -24,7 +23,6 @@ public class DFSINode implements Serializable {
                 System.out.print("|--");
             }
         }
-
         System.out.println(inode.name);
         if(inode.childInode == null)
             return;

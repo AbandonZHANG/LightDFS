@@ -1,7 +1,7 @@
-package test.java.com.zzp.app;
+package test.java.com.zzp.simpledfs;
 
-import main.java.com.zzp.app.DFSConsistentHashing;
-import main.java.com.zzp.app.DFSDataNodeState;
+import main.java.com.zzp.simpledfs.DFSConsistentHashing;
+import main.java.com.zzp.simpledfs.DFSDataNodeState;
 
 import java.util.UUID;
 

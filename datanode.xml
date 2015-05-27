@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>  
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>  
+    <comment>DataNode配置文件</comment>
+    <!-- DataNode ip -->
+	<entry  
+        key="ip"></entry>
+	<!-- DataNode 服务端口号 -->
+    <entry  
+        key="port">50002</entry>
+	<!-- 连接的NameNode ip -->	
+    <entry  
+        key="namenodeip"></entry>
+	<!-- 连接的NameNode 服务端口号 -->	
+    <entry  
+        key="namenodeip"></entry>
+	<!-- 数据块存储目录 -->
+    <entry  
+        key="blockdir">datablocks</entry>
+</properties>

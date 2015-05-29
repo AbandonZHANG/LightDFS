@@ -1,66 +1,103 @@
 package main.java.com.zzp.simpledfs;
 
-import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.TreeMap;
+import java.util.UUID;
 
 /**
  * Created by Zhipeng Zhang on 15/05/25 0025.
  */
-public class DFSConsistentHashing<T> {
-    private final TreeMap<DFSHashFunction.LongPair, T> circle = new TreeMap<DFSHashFunction.LongPair, T>(new LongPairComparator());
-    private DFSHashFunction.LongPair hashcode;
-    private byte virtualNodeNumber = 5;
-    public class LongPairComparator implements Comparator<DFSHashFunction.LongPair> {
-        @Override
-        public int compare(DFSHashFunction.LongPair n1, DFSHashFunction.LongPair n2){
-            long res = n1.val1 - n2.val2;
-            if(res != 0){
-                return (int)res;
+public class DFSConsistentHashing {
+    static private long unitSpace = 64*1024*1024;  // 每unitSpace MB硬盘空间一个虚拟节点, 默认64MB
+    public static void setUnitSpace(int unitSpace) {
+        DFSConsistentHashing.unitSpace = unitSpace;
+    }
+
+    private class CHNode{
+        String nodeName;    // 节点名
+        long freeSpace;     // 节点硬盘空间MB
+        int virtualNumber;  // 虚拟节点个数，根据数据节点硬盘空间改变虚拟节点个数
+        ArrayList<String> nodeKeys;   // 节点在Consistent Hashing中Hash前的Key值
+        CHNode(String _nodeName, long _freeSpace){
+            nodeName = _nodeName;
+            freeSpace = _freeSpace;
+            virtualNumber = (int)(freeSpace / DFSConsistentHashing.unitSpace);
+            nodeKeys = new ArrayList<String>();
+            for(int i = 0; i < virtualNumber; i ++){
+                nodeKeys.add(UUID.randomUUID().toString());
             }
-            else{
-                return (int)(n1.val2 - n2.val2);
+        }
+        public void setVirtualNumber(long _freeSpace){
+            freeSpace = _freeSpace;
+            virtualNumber = (int)(freeSpace / DFSConsistentHashing.unitSpace);
+        }
+    }
+    private final HashMap<String, CHNode> chNodes = new HashMap<String, CHNode>();
+    private final TreeMap<Integer, String> chCircle = new TreeMap<Integer, String>();
+    public void addNode(String nodeName, long freeSpace){
+        // 新建CHNode节点信息
+        CHNode newNode = new CHNode(nodeName, freeSpace);
+        // 将节点加入Consistent Hashing节点列表中
+        chNodes.put(nodeName, newNode);
+        int vNum = newNode.nodeKeys.size();
+        for(int i = 0; i < vNum; i ++){
+            // 求出每个key的hashcode，加入circle域中
+            chCircle.put(DFSHashFunction.hash(newNode.nodeKeys.get(i)), nodeName);
+        }
+        // 数据迁移
+    }
+    public void updateNode(String nodeName, long freeSpace){
+        // 找到对应CHNode节点信息
+        CHNode theNode = chNodes.get(nodeName);
+        // 修正虚拟节点个数
+        int originVNum = theNode.virtualNumber;
+        theNode.setVirtualNumber(freeSpace);
+        if(originVNum > theNode.virtualNumber){
+            int diffNum = originVNum - theNode.virtualNumber;
+            while(diffNum != 0){
+                String delKey = theNode.nodeKeys.get(theNode.nodeKeys.size()-1);
+                // 删除多余的虚拟节点key
+                theNode.nodeKeys.remove(theNode.nodeKeys.size()-1);
+                // 删除circle中对应的值
+                chCircle.remove(delKey);
+                diffNum --;
             }
-        }
-    }
-    public void addNode(String key, T node){
-        byte[] keyBytes = key.getBytes();
-        // ��������ڵ�
-        for(byte i = 0; i < virtualNodeNumber; i ++){
-            keyBytes[keyBytes.length-1] = (byte)((keyBytes[keyBytes.length-1] + 1) % 128);
-            hashcode = DFSHashFunction.hash(keyBytes);
-            circle.put(hashcode, node);
-        }
-    }
-    public void deleteNode(String key){
-        byte[] keyBytes = key.getBytes();
-        // ɾ������ڵ�
-        for(byte i = 0; i < virtualNodeNumber; i ++){
-            keyBytes[keyBytes.length-1] = (byte)((keyBytes[keyBytes.length-1] + 1) % 128);
-            hashcode = DFSHashFunction.hash(keyBytes);
-            circle.remove(hashcode);
-        }
-    }
-    public T get(String key){
-        hashcode = DFSHashFunction.hash(key);
-        if(circle.containsKey(hashcode)){
-            return circle.get(hashcode);
         }
         else{
-            T node = circle.higherEntry(hashcode).getValue();
-            if(node == null){
-                return circle.firstEntry().getValue();
-            }
-            else{
-                return node;
+            int diffNum = theNode.virtualNumber - originVNum;
+            while(diffNum != 0){
+                // 加入新的虚拟节点Key
+                String newKey = UUID.randomUUID().toString();
+                theNode.nodeKeys.add(newKey);
+                chCircle.put(DFSHashFunction.hash(newKey), nodeName);
+                diffNum --;
             }
         }
-
     }
-    public int getVirtualNodeNumber() {
-        return virtualNodeNumber;
+    public void removeNode(String nodeName){
+        // 找到对应CHNode节点信息
+        CHNode theNode = chNodes.get(nodeName);
+        // 将节点从Consistent Hashing节点列表中删除
+        chNodes.remove(nodeName);
+        int vNum = theNode.nodeKeys.size();
+        for(int i = 0; i < vNum; i ++){
+            // 求出每个key的hashcode，加入circle域中
+            chCircle.remove(DFSHashFunction.hash(theNode.nodeKeys.get(i)));
+        }
+        // 数据迁移
     }
-
-    public void setVirtualNodeNumber(byte virtualNodeNumber) {
-        this.virtualNodeNumber = virtualNodeNumber;
+    public String getNode(String key){
+        Integer hashcode = DFSHashFunction.hash(key);
+        if(chCircle.containsKey(hashcode)){
+            return chCircle.get(hashcode);
+        }
+        else{
+            String node = chCircle.higherEntry(hashcode).getValue();
+            if(node == null){
+                node = chCircle.firstEntry().getValue();
+            }
+            return node;
+        }
     }
 }

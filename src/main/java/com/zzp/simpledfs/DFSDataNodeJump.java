@@ -1,43 +1,34 @@
 package main.java.com.zzp.simpledfs;
 
-import java.io.File;
 import java.rmi.Naming;
 
 /**
  * Created by Zhipeng Zhang on 15/05/26 0026.
  */
 public class DFSDataNodeJump extends Thread{
-    String workingDirectory;        // Êı¾İ·şÎñÆ÷¹¤×÷Ä¿Â¼
-    final DFSDataNodeState mystate = new DFSDataNodeState();
-    public void getNodeStates(){
-        try {
-            File workingDir = new File(workingDirectory);
-            mystate.totalSpace = workingDir.getTotalSpace();
-            mystate.freeSpace = workingDir.getFreeSpace();
-            mystate.usedSpace = mystate.totalSpace - mystate.freeSpace;
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
+    String datanodeName;
+    int perSeconds;  // æ¯éš”N mså‘é€ä¸€æ¬¡å¿ƒè·³
+    int errorNumToQuit; //è¿ç»­Næ¬¡æ²¡æœ‰è¿æ¥ä¸ŠNameNodeå°±é€€å‡º
+    DFSDataNodeJump(String _datanodeName, int _perSecond, int _errorNumToQuit){
+        super();
+        datanodeName = _datanodeName;
+        perSeconds = _perSecond;
+        errorNumToQuit = _errorNumToQuit;
     }
     public void run() {
         while(true) {
-            getNodeStates();
-            int lentime = 0;
+            int errorTime = 0;
             try {
                 DataNodeNameNodeRPCInterface datanodeRmi = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
-                datanodeRmi.sendDataNodeStates(mystate);
-                lentime = 0;
-                /**
-                 * Ã¿¸ô1·ÖÖÓ·¢ËÍÒ»´ÎĞÄÌø
-                 */
-                sleep(6000);
+                datanodeRmi.sendDataNodeJump(datanodeName);
+                errorTime = 0;
+                sleep(perSeconds);
             } catch (Exception e) {
                 //e.printStackTrace();
                 System.out.println("The Namenode RMI serve is not found!");
-                lentime ++;
-                // Èç¹û NameNode 5´ÎÎ´·´Ó¦£¬Ôò¶Ï¿ªÁ¬½Ó
-                if(lentime == 5)
+                errorTime ++;
+                // å¦‚æœ NameNode å¤šæ¬¡æœªååº”ï¼Œåˆ™æ–­å¼€è¿æ¥
+                if(errorTime == errorNumToQuit)
                     return;
             }
         }

@@ -12,7 +12,7 @@ public class DFSDataNode {
         DFSDataNode datanode = new DFSDataNode();
         try {
             datanode.dataNodeRPC = new DFSDataNodeRPC();
-            // ³õÊ¼»¯
+            // åˆå§‹åŒ–
             datanode.dataNodeRPC.initialize();
         }
         catch (Exception e){
@@ -37,7 +37,7 @@ public class DFSDataNode {
         System.out.println("***************************************************************************");
     }
     /**
-     * ´Ó¿ØÖÆÌ¨¶ÁÈ¡ÓÃ»§ÃüÁî
+     * ä»æ§åˆ¶å°è¯»å–ç”¨æˆ·å‘½ä»¤
      */
     public void readUserCommand(){
         String userCmd;
@@ -78,7 +78,7 @@ public class DFSDataNode {
         System.out.println("");
     }
     public void start(){
-        // ¿ªÆô DataNode RMI ·şÎñ
+        // å¼€å¯ DataNode RMI æœåŠ¡
         try{
             System.out.println("[INFO] Starting block transfer rmi serve.");
             dataNodeRPC.run();
@@ -88,7 +88,7 @@ public class DFSDataNode {
         }
     }
     public void close(){
-        // ¹Ø±Õ DataNode RMI ·şÎñ
+        // å…³é—­ DataNode RMI æœåŠ¡
         dataNodeRPC.close();
         System.out.println("[INFO] The DataNode serve is closed!");
     }

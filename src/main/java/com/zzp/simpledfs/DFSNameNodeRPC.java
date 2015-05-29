@@ -13,31 +13,44 @@ import java.util.*;
  * Created by Zhipeng Zhang on 15/05/25 0025.
  */
 public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameNodeRPCInterface,ClientNameNodeRPCInterface,Runnable{
+    int initUserSpace;    // ç”¨æˆ·åˆå§‹å¯ç”¨ç©ºé—´
+    private class DFSUser{
+        String userName;
+        String base64Password;    // ç»è¿‡å®¢æˆ·ç«¯Base64åŠ å¯†
+        int maxSpace;       // æœ€å¤§å¯ç”¨ç©ºé—´ MB
+        int usedSpace;      // å·²ç”¨ç©ºé—´ MB
+        DFSUser(String _userName, String _base64Password){
+            userName = _userName;
+            base64Password = _base64Password;
+            maxSpace = initUserSpace;
+            usedSpace = 0;
+        }
+    }
+    HashMap<String, DFSUser> users;  // ç”¨æˆ·åˆ—è¡¨ï¼Œéœ€è¦æ°¸ä¹…åŒ–å­˜å‚¨
+    DFSINode inode;    // DFSæ–‡ä»¶ç›®å½•, éœ€è¦æ°¸ä¹…åŒ–å­˜å‚¨
+    HashMap<String, DFSFileBlockMapping> fileBlockMapping; // æ–‡ä»¶-æ•°æ®å—æ˜ å°„, éœ€è¦æ°¸ä¹…åŒ–å­˜å‚¨
 
-    DFSINode inode;    // DFSÎÄ¼şÄ¿Â¼, ĞèÒªÓÀ¾Ã»¯´æ´¢
-    HashMap<String, DFSFileBlockMapping> fileBlockMapping; // ÎÄ¼ş-Êı¾İ¿éÓ³Éä, ĞèÒªÓÀ¾Ã»¯´æ´¢
+    final HashMap<String, String> blockDataNodeMappings = new HashMap<String, String>();    // æ•°æ®å—-æ•°æ®èŠ‚ç‚¹æ˜ å°„, ç”±æ•°æ®èŠ‚ç‚¹å‘é€
+    final HashMap<String, DFSDataNodeState> datanodeStates = new HashMap<String, DFSDataNodeState>();     // å½“å‰æ´»è·ƒæ•°æ®èŠ‚ç‚¹çŠ¶æ€
 
-    // Êı¾İ¿é-Êı¾İ½ÚµãÓ³Éä, ÓÉÊı¾İ½Úµã·¢ËÍ
-    final HashMap<String, String> blockDataNodeMappings = new HashMap<String, String>();
-    // µ±Ç°»îÔ¾Êı¾İ½Úµã×´Ì¬
-    HashMap<String, DFSDataNodeState> datanodeStates = new HashMap<String, DFSDataNodeState>();
-    // °×Ãûµ¥include, exclude
+    // ç™½åå•include, exclude
     final ArrayList<String> includeNodes = new ArrayList<String>();
     final ArrayList<String> excludeNodes = new ArrayList<String>();
-    // Ò»ÖÂĞÔ¹şÏ£
-    final DFSConsistentHashing<DFSDataNodeState> consistentHash = new DFSConsistentHashing<DFSDataNodeState>();
+    // ä¸€è‡´æ€§å“ˆå¸Œ
+    final DFSConsistentHashing consistentHash = new DFSConsistentHashing();
 
     Registry registry;  // RMI Registry
+    int rmiPort;        // RMI æœåŠ¡ç«¯å£å·
 
     DFSNameNodeRPC() throws RemoteException {
         // Necessary to call UnicastRemoteObject();
         super();
     };
     public void initialize(){
-        // ¶ÁÈ¡ÓÀ¾Ã»¯´æ´¢µÄInodeºÍFileBlock Mapping
+        // è¯»å–æ°¸ä¹…åŒ–å­˜å‚¨çš„Inodeå’ŒFileBlock Mapping
         loadState();
 
-        // ¶ÁÈ¡Êı¾İ·şÎñÆ÷°×Ãûµ¥
+        // è¯»å–æ•°æ®æœåŠ¡å™¨ç™½åå•
         try {
             readIncludeFile("include", true);
             readIncludeFile("exclude", false);
@@ -45,18 +58,19 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         catch (Exception e){
             System.out.println("[ERROR!] Failed to read include/exclude file! Check if the file is exists!");
         }
+
+        readConfigFile();
     }
     /**
-     * ÔØÈëÓÀ¾Ã»¯Êı¾İ
+     * è½½å…¥æ°¸ä¹…åŒ–æ•°æ®
      */
     public void loadState(){
         File inodeFile = new File("inode");
         File filemapFile = new File("filemap");
+        File usersFile = new File("users");
         if(!inodeFile.exists()){
-            inode = new DFSINode();
-            // ³õÊ¼»¯DFS INode¸ùÄ¿Â¼
-            inode.name = "root";
-            inode.childInode = new HashMap<String, DFSINode>();
+            // åˆå§‹åŒ–DFS INodeæ ¹ç›®å½•
+            inode = new DFSINode("root", true);
         }
         else{
             try {
@@ -64,7 +78,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
                 inode = (DFSINode) inodeIs.readObject();
             }
             catch (Exception e) {
-                System.out.println("[ERROR!] Load inode data failed!");
+                System.out.println("[ERROR!] Load inode file failed!");
             }
         }
 
@@ -77,38 +91,73 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
                 fileBlockMapping = (HashMap<String, DFSFileBlockMapping>) filemapIs.readObject();
             }
             catch (Exception e){
-                System.out.println("[ERROR!] Load filemap data failed!");
+                System.out.println("[ERROR!] Load filemap file failed!");
+            }
+        }
+
+        if(!usersFile.exists()){
+            users = new HashMap<String, DFSUser>();
+        }
+        else{
+            try {
+                ObjectInputStream usersIs = new ObjectInputStream(new FileInputStream(usersFile));
+                users = (HashMap<String, DFSUser>) usersIs.readObject();
+            }
+            catch (Exception e){
+                System.out.println("[ERROR!] Load users file failed!");
             }
         }
     }
 
     /**
-     * Inode ºÍ File-Block Mapping Êı¾İÓÀ¾Ã»¯
+     * Inode å’Œ File-Block Mapping æ•°æ®æ°¸ä¹…åŒ–
      */
     public void storeState(){
         File inodeFile = new File("inode");
         File filemapFile = new File("filemap");
+        File usersFile = new File("users");
         if(inodeFile.exists()){
             inodeFile.delete();
         }
         if(filemapFile.exists()){
             filemapFile.delete();
         }
+        if(usersFile.exists()){
+            usersFile.delete();
+        }
         try{
             ObjectOutputStream inodeOos = new ObjectOutputStream(new FileOutputStream(inodeFile));
             inodeOos.writeObject(inode);
             ObjectOutputStream filemapOos = new ObjectOutputStream(new FileOutputStream(filemapFile));
             filemapOos.writeObject(fileBlockMapping);
+            ObjectOutputStream usersOos = new ObjectOutputStream(new FileOutputStream(usersFile));
+            usersOos.writeObject(users);
         }
         catch (Exception e){
-            System.out.println("[ERROR!] Stored data failed!");
+            System.out.println("[ERROR!] Stored data file failed!");
+        }
+    }
+    /**
+     * è¯»å– Properties é…ç½®æ–‡ä»¶:namenode.xml
+     */
+    public void readConfigFile(){
+        Properties props = new Properties();
+        try{
+            InputStream fin = new FileInputStream("namenode.xml");
+            props.loadFromXML(fin);
+            fin.close();
+            rmiPort = Integer.valueOf(props.getProperty("port"));
+            initUserSpace = Integer.valueOf(props.getProperty("inituserspace"));
+        }
+        catch (Exception e){
+            System.out.println("[ERROR!] Read config file error!");
         }
     }
     public void run(){
         try{
-            // Æô¶¯ rmiregistry
+            // å¯åŠ¨ rmiregistry
             registry = LocateRegistry.createRegistry(2020);
-            // °ó¶¨ RMI ·şÎñ
+            // ç»‘å®š RMI æœåŠ¡
             Naming.rebind("rmi://localhost:2020/DFSNameNode", this);
             System.out.println("[INFO] The NameNode RMI is running...");
         }
@@ -118,9 +167,9 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
     }
     public void close(){
         try{
-            // Êı¾İÓÀ¾Ã»¯
+            // æ•°æ®æ°¸ä¹…åŒ–
             storeState();
-            // ¹Ø±Õ rmiregistry
+            // å…³é—­ rmiregistry
             if(registry!=null)
                 UnicastRemoteObject.unexportObject(registry,true);
             System.out.println("[INFO] The NameNode RMI is done...");
@@ -133,7 +182,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
 
     /**
      * @param filename
-     * @param include Èç¹û¶ÁÈ¡includeÎÄ¼ş£¬ÔòÎªtrue£»¶ÁÈ¡excludeÎÄ¼şÎªfalse
+     * @param include å¦‚æœè¯»å–includeæ–‡ä»¶ï¼Œåˆ™ä¸ºtrueï¼›è¯»å–excludeæ–‡ä»¶ä¸ºfalse
      * @throws FileNotFoundException
      */
     public void readIncludeFile(String filename, boolean include) throws FileNotFoundException {
@@ -160,23 +209,20 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
     }
 
     /**
-     * ÁĞ³öµ±Ç°DFSÖĞÁ¬½ÓµÄÊı¾İ½ÚµãÖĞµÄËùÓĞÊı¾İ¿éÁĞ±í
+     * åˆ—å‡ºå½“å‰DFSä¸­è¿æ¥çš„æ•°æ®èŠ‚ç‚¹ä¸­çš„æ‰€æœ‰æ•°æ®å—åˆ—è¡¨
      */
     public void listBlocks(){
-        Iterator iter = blockDataNodeMappings.entrySet().iterator();
-        while(iter.hasNext()){
-            Map.Entry entry = (Map.Entry)iter.next();
+        for (Map.Entry entry : blockDataNodeMappings.entrySet()){
             System.out.println(entry.getKey() + "    Affiliated with DataNode: " + entry.getValue());
         }
     }
 
     /**
-     * ÁĞ³öÎÄ¼ş¼°ÆäÊı¾İ¿éÓ³ÉäÁĞ±í
+     * åˆ—å‡ºæ–‡ä»¶åŠå…¶æ•°æ®å—æ˜ å°„åˆ—è¡¨
      */
     public void listFileBlockMappings(){
-        Iterator iter = fileBlockMapping.entrySet().iterator();
-        while(iter.hasNext()){
-            Map.Entry entry = (Map.Entry)iter.next();
+        // foreach
+        for (Map.Entry entry : fileBlockMapping.entrySet()){
             System.out.println("---"+entry.getKey());
             DFSFileBlockMapping thefileBlockMapping = (DFSFileBlockMapping)entry.getValue();
             for (String block:thefileBlockMapping.blocks){
@@ -186,33 +232,47 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
     }
 
     /**
-     * DataNodes RMI - sendDataNodeStates
-     * @param datanode
+     * åˆ¤æ–­DataNodeæœåŠ¡å™¨è¿æ¥çŠ¶æ€
+     * @param datanodeID
+     * @return 0:nodeä¸åœ¨ç™½åå•ä¸­; 1:nodeæœªè¿æ¥; 2:nodeå·²è¿æ¥
+     */
+    public int checkNodeConnection(String datanodeID){
+        if(includeNodes.contains(datanodeID)){
+            if(excludeNodes.contains(datanodeID)){
+                return 1;
+            }
+            else{
+                return 2;
+            }
+        }
+        else{
+            return 0;
+        }
+    }
+    /**
+     * DataNodes RMI - sendDataNodeJump
+     * @param datanodeID
      * @throws RemoteException
      */
-    public void sendDataNodeStates(DFSDataNodeState datanode) throws RemoteException{
-        // ×´Ì¬¼à¿Ø
-        if(includeNodes.contains(datanode.datanodeID) && !excludeNodes.contains(datanode.datanodeID)){
-            datanodeStates.put(datanode.datanodeID, datanode);
+    @Override
+    public void sendDataNodeJump(String datanodeID) throws RemoteException{
+        // å¿ƒè·³ç›‘æ§
+        if(checkNodeConnection(datanodeID) == 2){
+
         }
     }
 
     /**
-     * DataNodes RMI - registerDataNode
+     * DataNodes RMI - sendDataNodeStates
      * @param datanode
-     * @return
      * @throws RemoteException
      */
-    public boolean registerDataNode(DFSDataNodeState datanode) throws RemoteException{
-        if(includeNodes.contains(datanode.datanodeID) && excludeNodes.contains(datanode.datanodeID)){
-            // ±ê¼Ç·şÎñÆ÷ÒÑÁ¬½Ó
-            excludeNodes.remove(datanode.datanodeID);
-            // ×¢²áÒ»ÖÂĞÔ¹şÏ£
-            consistentHash.addNode(datanode.datanodeID, datanode);
-            return true;
-        }
-        else{
-            return false;
+    @Override
+    public void sendDataNodeStates(DFSDataNodeState datanode) throws RemoteException{
+        // èŠ‚ç‚¹çŠ¶æ€ç›‘æ§
+        if(checkNodeConnection(datanode.datanodeID) == 2){
+            // æ›´æ–°ä¸€è‡´æ€§å“ˆå¸Œ
+            consistentHash.updateNode(datanode.datanodeID, datanode.freeSpace);
         }
     }
 
@@ -222,12 +282,33 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
      * @param blocks
      * @throws RemoteException
      */
+    @Override
     public void sendDataNodeBlockList(String datanodeID, ArrayList<String> blocks)throws RemoteException{
-        if(includeNodes.contains(datanodeID) && !excludeNodes.contains(datanodeID)){
+        if(checkNodeConnection(datanodeID) == 2){
             for(String block:blocks){
-                // ¼ÓÈëÊı¾İ¿é-Êı¾İ½ÚµãÓ³ÉäÖĞ
+                // åŠ å…¥æ•°æ®å—-æ•°æ®èŠ‚ç‚¹æ˜ å°„ä¸­
                 blockDataNodeMappings.put(block, datanodeID);
             }
+        }
+    }
+
+    /**
+     * DataNodes RMI - registerDataNode
+     * @param datanode
+     * @return
+     * @throws RemoteException
+     */
+    @Override
+    public boolean registerDataNode(DFSDataNodeState datanode) throws RemoteException{
+        if(checkNodeConnection(datanode.datanodeID) == 1){
+            // æ ‡è®°æœåŠ¡å™¨å·²è¿æ¥
+            excludeNodes.remove(datanode.datanodeID);
+            // æ³¨å†Œä¸€è‡´æ€§å“ˆå¸Œ
+            consistentHash.addNode(datanode.datanodeID, datanode.freeSpace);
+            return true;
+        }
+        else{
+            return false;
         }
     }
 
@@ -237,21 +318,23 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
      * @return
      * @throws RemoteException
      */
+    @Override
     public boolean unRegisterDataNode(String datanodeID) throws RemoteException{
-        if(includeNodes.contains(datanodeID) && !excludeNodes.contains(datanodeID)){
-            // É¾³ıÊı¾İ½ÚµãÏÂµÄÓ³Éä
+        if(checkNodeConnection(datanodeID) == 2){
+            // åˆ é™¤æ•°æ®èŠ‚ç‚¹ä¸‹çš„æ˜ å°„
             Iterator iter = blockDataNodeMappings.entrySet().iterator();
             while(iter.hasNext()){
                 Map.Entry entry = (Map.Entry)iter.next();
                 if(entry.getValue().equals(datanodeID)){
-                    blockDataNodeMappings.remove(entry.getKey());
+                    // å¾ªç¯ä¸­åˆ é™¤è°ƒç”¨Iteratorçš„removeæ‰æ˜¯å®‰å…¨çš„
+                    iter.remove();
                 }
             }
-            // É¾³ıµ±Ç°»îÔ¾Êı¾İ½Úµã×´Ì¬
+            // åˆ é™¤å½“å‰æ´»è·ƒæ•°æ®èŠ‚ç‚¹çŠ¶æ€
             datanodeStates.remove(datanodeID);
-            // É¾³ıÒ»ÖÂĞÔ¹şÏ£ÖĞµÄ½Úµã
-            consistentHash.deleteNode(datanodeID);
-            // ÖØĞÂ±ê¼ÇÎªÎ´Á¬½Ó
+            // åˆ é™¤ä¸€è‡´æ€§å“ˆå¸Œä¸­çš„èŠ‚ç‚¹
+            consistentHash.removeNode(datanodeID);
+            // é‡æ–°æ ‡è®°ä¸ºæœªè¿æ¥
             excludeNodes.add(datanodeID);
             return true;
         }
@@ -259,80 +342,130 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
     }
 
     /**
+     * å®¢æˆ·ç«¯ç”¨æˆ·æ³¨å†ŒRPC
+     * @param userName
+     * @param password
+     * @return 0:user name has exists, 1:accept
+     * @throws RemoteException
+     */
+    @Override
+    public int registerUser(String userName, String password) throws RemoteException{
+        if(users.containsKey(userName)){
+            return 0;
+        }
+        // æ–°å»ºDFSUserç±»ï¼ŒåŠ å…¥åˆ°ç”¨æˆ·åˆ—è¡¨ä¸­
+        users.put(userName, new DFSUser(userName, password));
+        // åˆ†é…INodeçš„Userç›®å½•
+        DFSINode userINode = new DFSINode(userName, true);
+        inode.childInode.put(userName, userINode);
+        return 1;
+    }
+
+    /**
+     * å®¢æˆ·ç«¯ç”¨æˆ·æ³¨é”€RPC
+     * @param userName
+     * @param password
+     * @return 0: æ²¡æœ‰è¯¥ç”¨æˆ·; 1: æ³¨é”€æˆåŠŸ; 2: èº«ä»½éªŒè¯é”™è¯¯ï¼ˆå¯†ç é”™è¯¯ï¼‰
+     * @throws RemoteException
+     */
+    @Override
+    public int unRegisterUser(String userName, String password) throws RemoteException{
+        if(users.containsKey(userName)){
+            if(password.equals(users.get(userName).base64Password)){
+                // ä»ç”¨æˆ·åˆ—è¡¨ä¸­åˆ é™¤
+                users.remove(userName);
+                // ä»INodeèŠ‚ç‚¹ä¸­åˆ é™¤ç”¨æˆ·ç›®å½•
+
+                // åˆ é™¤ç”¨æˆ·æ–‡ä»¶åŠæ•°æ®å—
+
+            }
+            else{
+                return 2;
+            }
+        }
+        else{
+            return 0;
+        }
+        return 1;
+    }
+    /**
      * Clients RMI - lsDFSDirectory
      * @param path
      * @return
      * @throws RemoteException
      * @throws FileNotFoundException
      */
+    @Override
     public ArrayList< Map.Entry<String, Boolean> > lsDFSDirectory(String path) throws RemoteException, FileNotFoundException{
-        DFSINode theInode;
-        ArrayList< Map.Entry<String, Boolean> > res = new ArrayList<Map.Entry<String, Boolean>>();
-        try {
-            theInode = updateDFSINode(path, (short) 0);
-            if(theInode == null){
-                throw new FileNotFoundException();
-            }
-            else{
-                Iterator iter = theInode.childInode.entrySet().iterator();
-                while(iter.hasNext()){
-                    Map.Entry entry = (Map.Entry)iter.next();
-                    DFSINode tmpchild = (DFSINode)entry.getValue();
-                    //res.add(new AbstractMap.SimpleEntry<String, Boolean>((String)entry.getKey(), new Boolean(tmpchild.childInode==null)));
-                }
-            }
-        }
-        catch (FileAlreadyExistsException e){
-
-        }
+//        DFSINode theInode;
+//        ArrayList< Map.Entry<String, Boolean> > res = new ArrayList<Map.Entry<String, Boolean>>();
+//        try {
+//            theInode = updateDFSINode(path, (short) 0);
+//            if(theInode == null){
+//                throw new FileNotFoundException();
+//            }
+//            else{
+//                Iterator iter = theInode.childInode.entrySet().iterator();
+//                while(iter.hasNext()){
+//                    Map.Entry entry = (Map.Entry)iter.next();
+//                    DFSINode tmpchild = (DFSINode)entry.getValue();
+//                    res.add(new AbstractMap.SimpleEntry<String, Boolean>((String)entry.getKey(), new Boolean(tmpchild.childInode==null)));
+//                }
+//            }
+//        }
+//        catch (FileAlreadyExistsException e){
+//
+//        }
         return null;
     }
+
     /**
      * Clients RMI - newDFSFileMapping
      * @param filePath
      * @param blocks_num
-     * @param ifLittleFile
+     * @param ifLittleFile æ˜¯å¦æ˜¯å°æ–‡ä»¶
      * @return
      * @throws RemoteException
      * @throws FileNotFoundException
      * @throws FileAlreadyExistsException
      */
+    @Override
     public ArrayList< Map.Entry<String, String> > newDFSFileMapping(String filePath, int blocks_num, boolean ifLittleFile) throws RemoteException, FileNotFoundException, FileAlreadyExistsException {
         ArrayList< Map.Entry<String, String> > blockDatanodes = new ArrayList<Map.Entry<String, String>>();
 
-        // ĞÂ½¨File-Block Mapping½Úµã
+        // æ–°å»ºFile-Block MappingèŠ‚ç‚¹
         DFSFileBlockMapping newFileBlockMapping = new DFSFileBlockMapping();
         newFileBlockMapping.filePath = filePath;
         newFileBlockMapping.ifLittleFile = ifLittleFile;
         newFileBlockMapping.blocks = new ArrayList<String>();
 
-        // ´¦Àí´óÎÄ¼ş
+        // å¤„ç†å¤§æ–‡ä»¶
         if(!ifLittleFile) {
-            // Éú³Éblock±êÊ¶
+            // ç”Ÿæˆblockæ ‡è¯†
             for (int i = 0; i < blocks_num; ++i) {
                 UUID newUUID = UUID.randomUUID();
-                // ¼ÓÈëµ½fileµÄblockÁĞ±íÖĞ
+                // åŠ å…¥åˆ°fileçš„blockåˆ—è¡¨ä¸­
                 newFileBlockMapping.blocks.add(newUUID.toString());
             }
 
-            // ÎªÊı¾İ¿é·ÖÅäÊı¾İ½Úµã-¸ºÔØ¾ùºâ
-            // ÏÈÈ¡µÚÒ»¸öÊı¾İ½Úµã
-            // £¡£¡£¡ÕâÀïÈç¹ûÃ»ÓĞÊı¾İ½Úµã£¬ÒÔÉÏĞèÒª»Ø¹ö
+            // ä¸ºæ•°æ®å—åˆ†é…æ•°æ®èŠ‚ç‚¹-è´Ÿè½½å‡è¡¡
+            // å…ˆå–ç¬¬ä¸€ä¸ªæ•°æ®èŠ‚ç‚¹
+            // ï¼ï¼ï¼è¿™é‡Œå¦‚æœæ²¡æœ‰æ•°æ®èŠ‚ç‚¹ï¼Œä»¥ä¸Šéœ€è¦å›æ»š
             Iterator iter = datanodeStates.entrySet().iterator();
-            // ÕÒµ½¿É·ÖÅäµÄÊı¾İ½Úµã
+            // æ‰¾åˆ°å¯åˆ†é…çš„æ•°æ®èŠ‚ç‚¹
             if(iter.hasNext()){
 
-                // ½«FileÌí¼Ó½øInodeÎÄ¼ş½Úµã
+                // å°†Fileæ·»åŠ è¿›Inodeæ–‡ä»¶èŠ‚ç‚¹
                 updateDFSINode(filePath, (short)11);
 
-                // Ìí¼Ó±¾´ÎµÄFile-Block Mapping
+                // æ·»åŠ æœ¬æ¬¡çš„File-Block Mapping
                 fileBlockMapping.put(filePath, newFileBlockMapping);
 
-                Map.Entry<String, DFSDataNodeState> entry = (Map.Entry<String, DFSDataNodeState>)iter.next();
-                DFSDataNodeState dataState = entry.getValue();
+                Map.Entry entry = (Map.Entry)iter.next();
+                DFSDataNodeState dataState = (DFSDataNodeState)entry.getValue();
                 for (String block:newFileBlockMapping.blocks){
                     blockDatanodes.add(new AbstractMap.SimpleEntry<String, String>(block, dataState.ip));
-                    // Ìí¼ÓBlock-DataNodeÓ³Éä
+                    // æ·»åŠ Block-DataNodeæ˜ å°„
                     blockDataNodeMappings.put(block, dataState.datanodeID);
                 }
                 return blockDatanodes;
@@ -341,7 +474,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
                 return null;
             }
         }
-        // ´¦ÀíĞ¡ÎÄ¼ş
+        // å¤„ç†å°æ–‡ä»¶
         else{
             return blockDatanodes;
         }
@@ -354,15 +487,16 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
      * @throws RemoteException
      * @throws FileNotFoundException
      */
+    @Override
     public ArrayList< Map.Entry<String, String> > lookupFileBlocks(String filePath) throws RemoteException, FileNotFoundException{
         ArrayList< Map.Entry<String, String> > blockDatanodes = new ArrayList<Map.Entry<String, String>>();
         if(fileBlockMapping.containsKey(filePath)){
-            // »ñÈ¡ÎÄ¼ş¶ÔÓ¦µÄÊı¾İ¿éÓ³Éä¶ÔÏó
+            // è·å–æ–‡ä»¶å¯¹åº”çš„æ•°æ®å—æ˜ å°„å¯¹è±¡
             DFSFileBlockMapping fileBlocks = fileBlockMapping.get(filePath);
             for (String block:fileBlocks.blocks){
-                // ÔÚÊı¾İ¿é-Êı¾İ½ÚµãÓ³ÉäÖĞ²éÑ¯Êı¾İ¿éËùÊôÊı¾İ½Úµã±êÊ¶
+                // åœ¨æ•°æ®å—-æ•°æ®èŠ‚ç‚¹æ˜ å°„ä¸­æŸ¥è¯¢æ•°æ®å—æ‰€å±æ•°æ®èŠ‚ç‚¹æ ‡è¯†
                 String datanode = blockDataNodeMappings.get(block);
-                // »ñÈ¡µ±Ç°¸ÃÊı¾İ½ÚµãµÄip
+                // è·å–å½“å‰è¯¥æ•°æ®èŠ‚ç‚¹çš„ip
                 String datanodeip = datanodeStates.get(datanode).ip;
                 blockDatanodes.add(new AbstractMap.SimpleEntry<String, String>(block, datanodeip));
             }
@@ -380,6 +514,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
      * @throws RemoteException
      * @throws FileNotFoundException
      */
+    @Override
     public ArrayList< Map.Entry<String, String> > removeDFSFile(String filePath) throws RemoteException, FileNotFoundException{
         ArrayList< Map.Entry<String, String> > blockDatanodes = new ArrayList<Map.Entry<String, String>>();
         try{
@@ -395,9 +530,9 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
             // delete the file-block mapping
             fileBlockMapping.remove(filePath);
             for (String block:fileBlocks.blocks){
-                // ÔÚÊı¾İ¿é-Êı¾İ½ÚµãÓ³ÉäÖĞ²éÑ¯Êı¾İ¿éËùÊôÊı¾İ½Úµã±êÊ¶
+                // åœ¨æ•°æ®å—-æ•°æ®èŠ‚ç‚¹æ˜ å°„ä¸­æŸ¥è¯¢æ•°æ®å—æ‰€å±æ•°æ®èŠ‚ç‚¹æ ‡è¯†
                 String datanode = blockDataNodeMappings.get(block);
-                // »ñÈ¡µ±Ç°¸ÃÊı¾İ½ÚµãµÄip
+                // è·å–å½“å‰è¯¥æ•°æ®èŠ‚ç‚¹çš„ip
                 String datanodeip = datanodeStates.get(datanode).ip;
                 blockDatanodes.add(new AbstractMap.SimpleEntry<String, String>(block, datanodeip));
             }
@@ -417,6 +552,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
      * @throws FileNotFoundException
      * @throws FileAlreadyExistsException
      */
+    @Override
     public void renameDFSFile(String filePath, String newfilePath) throws RemoteException, FileNotFoundException, FileAlreadyExistsException{
         // del the origin file
         updateDFSINode(filePath, (short) 12);
@@ -447,6 +583,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
      * @throws FileNotFoundException
      * @throws FileAlreadyExistsException
      */
+    @Override
     public void addDFSDirectory(String path) throws RemoteException, FileNotFoundException, FileAlreadyExistsException{
         updateDFSINode(path, (short) 1);
     }
@@ -458,6 +595,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
      * @throws FileNotFoundException
      * @throws FileAlreadyExistsException
      */
+    @Override
     public void delDFSDirectory(String path) throws RemoteException, FileNotFoundException, FileAlreadyExistsException{
         updateDFSINode(path, (short) 2);
     }
@@ -470,93 +608,102 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
      * @throws FileNotFoundException
      * @throws FileAlreadyExistsException
      */
-    public boolean ifExistsDFSDirectory(String path) throws RemoteException, FileNotFoundException, FileAlreadyExistsException{
-        return updateDFSINode(path, (short) 0)!=null;
+    @Override
+    public boolean ifExistsDFSDirectory(String path) throws RemoteException{
+        boolean res = false;
+        try{
+            res = (updateDFSINode(path, (short) 0) != null);
+        }
+        catch (FileNotFoundException e){
+            return false;
+        }
+        catch (FileAlreadyExistsException e){
+            System.out.println("updateDFSInode function error!");
+        }
+        return res;
     }
 
     /**
-     * Inode ºËĞÄ²Ù×÷º¯Êı
-     * @param path
+     * Inode æ ¸å¿ƒæ“ä½œå‡½æ•°
+     * @param inodePath DFSINodeèŠ‚ç‚¹ç»å¯¹è·¯å¾„
      * @param method
      *        11: add new file
      *        12: delete a file
      *         1: add new dir
      *         2: delete a dir
      *         0: return the exists dir INode. If not exists, return null.
-     * @return
+     * @return method == 0 ä¸”å­˜åœ¨è¯¥èŠ‚ç‚¹æ—¶è¿”å›å¯¹åº”DFSINodeï¼Œå…¶ä»–æƒ…å†µè¿”å›null
      */
-    public DFSINode updateDFSINode(String path, short method) throws RemoteException, FileNotFoundException, FileAlreadyExistsException {
+    public DFSINode updateDFSINode(String inodePath, short method) throws RemoteException, FileNotFoundException, FileAlreadyExistsException {
         DFSINode tmp = inode;
-        // ½«Â·¾¶°´"\"·û·Ö¸ô³ö¸÷¼¶Ä¿Â¼À´
-        String[] splits = path.split("\\\\");   // ·Ö¸ô·û"\"
+        // å°†è·¯å¾„æŒ‰"\"ç¬¦åˆ†éš”å‡ºå„çº§ç›®å½•æ¥
+        String[] splits = inodePath.split("\\\\");   // åˆ†éš”ç¬¦"\"
         int length = splits.length-1;
 
-        // Ïû³ıÎ²'\'
+        // æ¶ˆé™¤å°¾'\'
         if (splits[splits.length - 1].equals("")){
             length --;
         }
 
-        // ´¦ÀíÊ¡ÂÔ¸ùÄ¿Â¼Ê½µÄ¾ø¶ÔÂ·¾¶ĞÎÊ½
+        // å¤„ç†çœç•¥æ ¹ç›®å½•å¼çš„ç»å¯¹è·¯å¾„å½¢å¼
         if(splits[0].equals("") || splits[0].equals("root"))
             splits[0] = "root";
         else
-            throw new FileNotFoundException("Illegal Path!");
+            throw new FileNotFoundException();
 
         for (int i = 1; i <= length; i ++){
             String eachPath = splits[i];
-            // µ±Ç°Â·¾¶ÊÇÎÄ¼ş
+            // å½“å‰è·¯å¾„æ˜¯æ–‡ä»¶
             if(tmp.childInode == null){
-                throw new FileAlreadyExistsException("Illegal Path!");
+                throw new FileAlreadyExistsException("");
             }
-            // µ±Ç°Ä¿Â¼´æÔÚÃûÎªeachPathµÄ×ÓÎÄ¼ş/Ä¿Â¼
-            // £¡£¡£¡µ±Ç°»¹Ã»ÓĞÅĞ¶Ï¶ÔÓ¦µÄ¶ù×ÓINode½ÚµãÊÇÄ¿Â¼»¹ÊÇÎÄ¼ş
+            // å½“å‰ç›®å½•å­˜åœ¨åä¸ºeachPathçš„å­æ–‡ä»¶/ç›®å½•
+            // ï¼ï¼ï¼å½“å‰è¿˜æ²¡æœ‰åˆ¤æ–­å¯¹åº”çš„å„¿å­INodeèŠ‚ç‚¹æ˜¯ç›®å½•è¿˜æ˜¯æ–‡ä»¶
             else if(tmp.childInode.containsKey(eachPath)){
                 if(i == length){
                     if(method == 11){
-                        throw new FileAlreadyExistsException("Inode has already exists!");
+                        throw new FileAlreadyExistsException("");
                     }
                     else if(method == 1){
-                        throw new FileAlreadyExistsException("Inode has already exists!");
+                        throw new FileAlreadyExistsException("");
                     }
                     else if(method == 12){
                         DFSINode tmpChild = tmp.childInode.get(eachPath);
                         if(tmpChild.childInode == null)
                             tmp.childInode.remove(eachPath);
                         else
-                            throw new FileNotFoundException("It is a Directory!");
+                            // It's a Directory!
+                            throw new FileNotFoundException();
                     }
                     else if(method == 2){
                         DFSINode tmpChild = tmp.childInode.get(eachPath);
                         if(tmpChild.childInode != null)
                             tmp.childInode.remove(eachPath);
                         else
-                            throw new FileNotFoundException("It is a File!");
+                            // It's a File!
+                            throw new FileNotFoundException();
                     }
                     else if(method == 0){
                         return tmp.childInode.get(eachPath);
                     }
                 }
                 else{
-                    // ¼ÌĞøÍùÏÂ±éÀú
+                    // ç»§ç»­å¾€ä¸‹éå†
                     tmp = tmp.childInode.get(eachPath);
                 }
             }
             else{
                 if(i == length){
                     if(method == 11){
-                        DFSINode newInode = new DFSINode();
-                        newInode.name = eachPath;
+                        DFSINode newInode = new DFSINode(eachPath, false);
                         tmp.childInode.put(eachPath, newInode);
                     }
                     else if(method == 1){
-                        DFSINode newInode = new DFSINode();
-                        newInode.name = eachPath;
-                        // Ä¿Â¼ĞèÒªÓĞchildInodeÒıÓÃ
-                        newInode.childInode = new HashMap<String, DFSINode>();
+                        DFSINode newInode = new DFSINode(eachPath, true);
                         tmp.childInode.put(eachPath, newInode);
                     }
                     else if(method == 2 || method == 12){
-                        throw new FileNotFoundException("Directory not found!");
+                        throw new FileNotFoundException();
                     }
                     else if(method == 0){
                         return null;
@@ -564,17 +711,14 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
                 }
                 else{
                     if(method == 1){
-                        // ĞÂ½¨Ä¿Â¼
-                        DFSINode newInode = new DFSINode();
-                        newInode.name = eachPath;
-                        // Ä¿Â¼ĞèÒªÓĞchildInodeÒıÓÃ
-                        newInode.childInode = new HashMap<String, DFSINode>();
+                        // æ–°å»ºç›®å½•
+                        DFSINode newInode = new DFSINode(eachPath, true);
                         tmp.childInode.put(eachPath, newInode);
-                        // ¼ÌĞøÑØ×ÅĞÂ½¨Ä¿Â¼ÍùÏÂ±éÀú
+                        // ç»§ç»­æ²¿ç€æ–°å»ºç›®å½•å¾€ä¸‹éå†
                         tmp = newInode;
                     }
                     else{
-                        throw new FileNotFoundException("Illegal Path!");
+                        throw new FileNotFoundException();
                     }
                 }
             }

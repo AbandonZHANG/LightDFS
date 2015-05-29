@@ -7,9 +7,9 @@ import java.util.ArrayList;
  * Created by Zhipeng Zhang on 15/05/25 0025.
  */
 public class DFSFileBlockMapping implements Serializable {
-    String filePath;    // ÎÄ¼şÔÚDFSÄ¿Â¼ÏÂµÄ¾ø¶ÔÂ·¾¶
-    boolean ifLittleFile;   // ÊÇ·ñÊÇĞ¡ÎÄ¼ş£ºĞ¡ÎÄ¼şºÏ²¢£¬´óÎÄ¼şÇĞ¸î
-    ArrayList<String> blocks;   // ´óÎÄ¼şÊı¾İ¿éÁĞ±í, ÓĞË³Ğò
-    long fileSize;      // ÎÄ¼ş´óĞ¡,×î´ó2^63-1 byte´óĞ¡
-    int offset;         // Ğ¡ÎÄ¼şËùÔÚÊı¾İ¿éÆ«ÒÆµØÖ·
+    String filePath;    // æ–‡ä»¶åœ¨DFSç›®å½•ä¸‹çš„ç»å¯¹è·¯å¾„
+    boolean ifLittleFile;   // æ˜¯å¦æ˜¯å°æ–‡ä»¶ï¼šå°æ–‡ä»¶åˆå¹¶ï¼Œå¤§æ–‡ä»¶åˆ‡å‰²
+    ArrayList<String> blocks;   // å¤§æ–‡ä»¶æ•°æ®å—åˆ—è¡¨, æœ‰é¡ºåº
+    long fileSize;      // æ–‡ä»¶å¤§å°,æœ€å¤§2^63-1 byteå¤§å°
+    int offset;         // å°æ–‡ä»¶æ‰€åœ¨æ•°æ®å—åç§»åœ°å€
 }

@@ -8,8 +8,9 @@ import java.util.ArrayList;
  * Created by Zhipeng Zhang on 15/05/25 0025.
  */
 public interface DataNodeNameNodeRPCInterface extends Remote{
-    public void sendDataNodeStates(DFSDataNodeState datanode) throws RemoteException;
-    public boolean registerDataNode(DFSDataNodeState datanode) throws RemoteException;
-    public boolean unRegisterDataNode(String datanodeID) throws RemoteException;
-    public void sendDataNodeBlockList(String datanodeID, ArrayList<String> blocks) throws RemoteException;
+    void sendDataNodeJump(String datanode) throws RemoteException;
+    boolean registerDataNode(DFSDataNodeState datanode) throws RemoteException;
+    void sendDataNodeStates(DFSDataNodeState datanode) throws RemoteException;
+    boolean unRegisterDataNode(String datanodeID) throws RemoteException;
+    void sendDataNodeBlockList(String datanodeID, ArrayList<String> blocks) throws RemoteException;
 }

@@ -4,44 +4,20 @@ import java.io.*;
 import java.nio.file.FileAlreadyExistsException;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Properties;
 
 /**
- * Created by Zhipeng Zhang on 15/05/26 0026.
+ * Created by Zhipeng Zhang on 15/05/29 0029.
  */
 public class DFSClient {
     ClientNameNodeRPCInterface clientRmi;
-    Stack<String> dir;  // µ±Ç°clientËùÔÚDFSÄ¿Â¼£¬³õÊ¼Îª¸ùÄ¿Â¼root
-    String namenodeIp, namenodePort;  // Á¬½ÓµÄNameNode ip, port
+    String namenodeIp, namenodePort;  // è¿æ¥çš„NameNode ip, port
     int blockSize;
-    public static void main(String[] args){
-        DFSClient client = new DFSClient();
-        client.printHello();
-        client.initialize();
-        client.readUserCommand();
-    }
-    public void printHello(){
-        System.out.println("***************************************************************************");
-        System.out.println("**                                                                       **");
-        System.out.println("**                                                                       **");
-        System.out.println("**                Welcome to use SimpleDFS! (version 0.1.0)              **");
-        System.out.println("**                                                                       **");
-        System.out.println("**                         Author: Zhipeng Zhang                         **");
-        System.out.println("**                                                                       **");
-        System.out.println("**                                 Client                                **");
-        System.out.println("**                                                                       **");
-        System.out.println("**                   Run 'help' to display the help index.               **");
-        System.out.println("**                                                                       **");
-        System.out.println("**                                                                       **");
-        System.out.println("***************************************************************************");
-    }
-    public void initialize(){
-        dir = new Stack<String>();
-        dir.clear();
-        dir.push("root");    // ¸ùÄ¿Â¼ÊÇroot
-
-        // ¶ÁÈ¡ÅäÖÃÎÄ¼şclient.xml
-        readConfigFile();
+    DFSClient(){
+        // è¯»å–é…ç½®æ–‡ä»¶client.xml
+        readConfigFile("client.xml");
 
         try {
             clientRmi = (ClientNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
@@ -52,191 +28,32 @@ public class DFSClient {
             System.exit(0);
         }
     }
-    /**
-     * ´Ó¿ØÖÆÌ¨¶ÁÈ¡ÓÃ»§ÃüÁî
-     */
-    public void readUserCommand(){
-        String userCmd;
-        Scanner in = new Scanner(System.in);
-        System.out.print("$["+getCurrentPath()+"]:");
-        while(in.hasNext()){
-            userCmd = in.nextLine();
-            String[] cmdArray = userCmd.split(" ");
-            if(cmdArray[0].equals("help")){
-                printHelp();
-            }
-            else if(cmdArray[0].equals("ls")){
-
-            }
-            else if(cmdArray[0].equals("cd")){
-                if(cmdArray.length < 2){
-                    System.out.println("Wrong command format!");
-                }
-                else if(cmdArray[1].equals(".."))
-                    dir.pop();
-                else{
-                    try{
-                        if(clientRmi.ifExistsDFSDirectory(getAbsolutelyPath(cmdArray[1]))){
-                            String[] paths = cmdArray[1].split("\\\\");
-                            if(paths[0].equals("") || paths[0].equals("root")){
-                                // ¾ø¶ÔÂ·¾¶
-                                dir.clear();
-                            }
-                            for(String eachpath:paths){
-                                if(eachpath.equals(""))
-                                    dir.push("root");
-                                else
-                                    dir.push(eachpath);
-                            }
-                        }
-                        else{
-                            System.out.println("The DFS doesn't have this directory!");
-                        }
-                    }
-                    catch (Exception e){
-                        System.out.println("Can't link to the NameNode RMI Server!");
-                    }
-                }
-            }
-            else if(cmdArray[0].equals("mkdir")){
-                if(cmdArray.length != 2){
-                    System.out.println("Wrong command format!");
-                }
-                else{
-                    mkdir(cmdArray[1]);
-                }
-            }
-            else if(cmdArray[0].equals("rmdir")){
-                if(cmdArray.length != 2){
-                    System.out.println("Wrong command format!");
-                }
-                else{
-                    rmdir(cmdArray[1]);
-                }
-            }
-            else if(cmdArray[0].equals("upload")){
-                if(cmdArray.length != 3){
-                    System.out.println("Wrong command format!");
-                }
-                else{
-                    uploadFile(cmdArray[1], cmdArray[2]);
-                }
-            }
-            else if(cmdArray[0].equals("download")){
-                if(cmdArray.length != 3){
-                    System.out.println("Wrong command format!");
-                }
-                else{
-                    downloadFile(cmdArray[1], cmdArray[2]);
-                }
-            }
-            else if(cmdArray[0].equals("renamefile")){
-                if(cmdArray.length != 3){
-                    System.out.println("Wrong command format!");
-                }
-                else{
-                    renameFile(cmdArray[1], cmdArray[2]);
-                }
-            }
-            else if(cmdArray[0].equals("removefile")){
-                if(cmdArray.length != 2){
-                    System.out.println("Wrong command format!");
-                }
-                else{
-                    removeFile(cmdArray[1]);
-                }
-            }
-            else if(cmdArray[0].equals("quit")){
-                break;
-            }
-            else{
-                System.out.println("[ERROR!] Command Not Found!");
-                printHelp();
-            }
-            System.out.print("$["+getCurrentPath()+"]:");
-        }
-    }
-    /**
-     * ¶ÁÈ¡ Properties ÅäÖÃÎÄ¼ş:client.xml
-     */
-    public void readConfigFile(){
+    private void readConfigFile(String file){
         Properties props = new Properties();
         try{
-            InputStream fin = new FileInputStream("client.xml");
+            InputStream fin = new FileInputStream(file);
             props.loadFromXML(fin);
             fin.close();
             namenodeIp = props.getProperty("namenodeip");
             namenodePort = props.getProperty("namenodeport");
             blockSize = Integer.valueOf(props.getProperty("blocksize"));
-            blockSize *= 1024*1024;
+            blockSize *= 1024*1024;     // MBæ¢ç®—æˆByte
         }
         catch (Exception e){
             System.out.println("[ERROR!] Read config file error!");
         }
     }
-    public void printHelp(){
-        System.out.println("");
-        System.out.println("The SimpleDFS Client commands are:");
-        System.out.println("    ls [path]                         List the DFS directory.");
-        System.out.println("    mkdir [path]                      Make a new DFS directory.");
-        System.out.println("    rmdir [path]                      Remove a designated DFS directory.");
-        System.out.println("    cd [path]                         Enter a designated DFS directory.");
-        System.out.println("    upload [localpath] [dfspath]      Upload a local file to the DFS.");
-        System.out.println("    download [dfspath] [localpath]    Download a DFS file.");
-        System.out.println("    removefile [dfspath]              Remove a DFS file.");
-        System.out.println("    renamefile [oripath] [newpath]    Rename a DFS file.");
-        System.out.println("    quit                              Quit the system.");
-        System.out.println("");
-    }
-    /**
-     * ½«µ±Ç°Ä¿Â¼¸÷¼¶dir×ª»¯ÎªString
-     * @return
-     */
-    public String getCurrentPath(){
-        String res = new String();
-        for(String eachpath:dir){
-            res += eachpath+"\\";
-        }
-        return res;
-    }
-    /**
-     * ½«²ÎÊıµÄÂ·¾¶×ª»»Îª¾ø¶ÔÂ·¾¶
-     * @param pathName
-     * @return
-     */
-    public String getAbsolutelyPath(String pathName){
-        String res = new String();
-        String[] paths = pathName.split("\\\\");
-        if(!paths[0].equals("") && !paths[0].equals("root")){
-            /**
-             * Èç¹û²»ÊÇ¾ø¶ÔÂ·¾¶£¬Ç°×º¼ÓÉÏ
-             */
-            for(String eachdir:dir){
-                res += eachdir + "\\";
-            }
-        }
-        for(int i = 0; i < paths.length; ++i){
-            String eachpath = paths[i];
-            if(i == paths.length-1){
-                if(eachpath.equals(""))
-                    res += "root";
-                else
-                    res += eachpath;
-            }
-            else{
-                if(eachpath.equals(""))
-                    res += "root"+"\\";
-                else
-                    res += eachpath+"\\";
-            }
 
-        }
-        return res;
+    public boolean registerUser(String userName, String password){
+        
+        return false;
     }
-    public void mkdir(String name){
-        String path = getAbsolutelyPath(name);
+    /**
+     * @param dfsPath DFSç›®å½•ç»å¯¹è·¯å¾„
+     */
+    public void mkdir(String dfsPath){
         try{
-            clientRmi.addDFSDirectory(path);
+            clientRmi.addDFSDirectory(dfsPath);
         }
         catch (FileNotFoundException e){
             System.out.println("[ERROR!] Illegal path!");
@@ -248,11 +65,14 @@ public class DFSClient {
             System.out.println("[ERROR!] The namenode RMI serve is not found!");
         }
     }
-    public void rmdir(String name){
-        String path = getAbsolutelyPath(name);
-        // £¡£¡£¡ĞèÒª¼ì²éÊÇ·ñÎªµ±Ç°Ä¿Â¼»òµ±Ç°¸¸Ä¿Â¼£¬²»ÄÜÉ¾³ı
+
+    /**
+     * @param dfsPath DFSç›®å½•ç»å¯¹è·¯å¾„
+     */
+    public void rmdir(String dfsPath){
+        // ï¼ï¼ï¼éœ€è¦æ£€æŸ¥æ˜¯å¦ä¸ºå½“å‰ç›®å½•æˆ–å½“å‰çˆ¶ç›®å½•ï¼Œä¸èƒ½åˆ é™¤
         try{
-            clientRmi.delDFSDirectory(path);
+            clientRmi.delDFSDirectory(dfsPath);
         }
         catch (FileNotFoundException e){
             System.out.println("[ERROR!] Illegal path!");
@@ -261,10 +81,24 @@ public class DFSClient {
             System.out.println("[ERROR!] The namenode RMI serve is not found!");
         }
     }
+
+    /**
+     * æ£€æŸ¥è¯¥DFSè·¯å¾„æ˜¯å¦å­˜åœ¨
+     * @param dfsPath DFSç›®å½•ç»å¯¹è·¯å¾„
+     */
+    public boolean checkdir(String dfsPath) throws RemoteException{
+        boolean res = false;
+        res = clientRmi.ifExistsDFSDirectory(dfsPath);
+        return res;
+    }
+
+    /**
+     * @param originPath åŸDFSç›®å½•ç»å¯¹è·¯å¾„
+     * @param newPath æ–°DFSç›®å½•ç»å¯¹è·¯å¾„
+     */
     public void renameFile(String originPath, String newPath){
-        String theNewPath = getAbsolutelyPath(newPath);
         try{
-            clientRmi.renameDFSFile(originPath, theNewPath);
+            clientRmi.renameDFSFile(originPath, newPath);
         }
         catch (FileNotFoundException e){
             System.out.println("[ERROR!] Illegal origin file path!");
@@ -276,14 +110,18 @@ public class DFSClient {
             System.out.println("[ERROR!] The namenode RMI serve is not found!");
         }
     }
-    public void uploadFile(String localFilePath, String path){
-        String DFSPath = getAbsolutelyPath(path);
+
+    /**
+     * @param localFilePath æœ¬åœ°æ–‡ä»¶ç»å¯¹è·¯å¾„æˆ–è€…ç›¸å¯¹è·¯å¾„
+     * @param dfsPath DFSç›®å½•ç»å¯¹è·¯å¾„
+     */
+    public void uploadFile(String localFilePath, String dfsPath){
         try{
-            // ¶ÁÈ¡±¾µØÎÄ¼ş·µ»Ø×Ö½ÚÁ÷
+            // è¯»å–æœ¬åœ°æ–‡ä»¶è¿”å›å­—èŠ‚æµ
             ArrayList<byte[]> byteblocks = transToByte(new File(localFilePath));
-            // ÏòNameNode·¢ËÍÇëÇó£¬ĞÂ½¨InodeÎÄ¼ş½Úµã£¬·ÖÅäÊı¾İ¿é±êÊ¶£¬·ÖÅäÊı¾İ½Úµã
-            // ·µ»ØÊı¾İ¿é±êÊ¶ºÍ´æ´¢Êı¾İ½Úµã
-            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.newDFSFileMapping(DFSPath, byteblocks.size(), false);
+            // å‘NameNodeå‘é€è¯·æ±‚ï¼Œæ–°å»ºInodeæ–‡ä»¶èŠ‚ç‚¹ï¼Œåˆ†é…æ•°æ®å—æ ‡è¯†ï¼Œåˆ†é…æ•°æ®èŠ‚ç‚¹
+            // è¿”å›æ•°æ®å—æ ‡è¯†å’Œå­˜å‚¨æ•°æ®èŠ‚ç‚¹
+            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.newDFSFileMapping(dfsPath, byteblocks.size(), false);
             if(blockDatanodes == null){
                 System.out.println("[ERROR!] File block not found!");
                 return ;
@@ -292,7 +130,7 @@ public class DFSClient {
             int i = 0;
             for(Map.Entry<String, String> eachTrans:blockDatanodes){
                 String block = eachTrans.getKey();
-                String datanodeip = eachTrans.getValue();
+                //String datanodeip = eachTrans.getValue();
                 ClientDataNodeRPCInterface transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://localhost:2021/DFSDataNode");
                 //ClientDataNodeRmiInterface transRmi = (ClientDataNodeRmiInterface)Naming.lookup("rmi://"+datanodeip+":2021/DFSDataNode");
                 transRmi.uploadBlock(byteblocks.get(i), block);
@@ -311,19 +149,23 @@ public class DFSClient {
             System.out.println("[ERROR!] Failed upload!");
         }
     }
-    public void downloadFile(String path, String localPath){
-        String DFSPath = getAbsolutelyPath(path);
+
+    /**
+     * @param dfsPath DFSç›®å½•ç»å¯¹è·¯å¾„
+     * @param localPath æœ¬åœ°ç»å¯¹è·¯å¾„æˆ–è€…ç›¸å¯¹è·¯å¾„
+     */
+    public void downloadFile(String dfsPath, String localPath){
         try{
-            // ÏòNameNodeÑ¯ÎÊÄ³ÎÄ¼şµÄÊı¾İ¿é±êÊ¶¼°Êı¾İ½Úµã
-            // ·µ»ØÊı¾İ¿é±êÊ¶ºÍ´æ´¢Êı¾İ½Úµã
-            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.lookupFileBlocks(DFSPath);
+            // å‘NameNodeè¯¢é—®æŸæ–‡ä»¶çš„æ•°æ®å—æ ‡è¯†åŠæ•°æ®èŠ‚ç‚¹
+            // è¿”å›æ•°æ®å—æ ‡è¯†å’Œå­˜å‚¨æ•°æ®èŠ‚ç‚¹
+            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.lookupFileBlocks(dfsPath);
             System.out.println("[INFO] Find "+blockDatanodes.size()+" blocks, begin to download...");
             File wfile = new File(localPath);
             BufferedOutputStream bufOut = new BufferedOutputStream(new FileOutputStream(wfile));
             int i = 1;
             for (Map.Entry<String, String> blockDatanode:blockDatanodes){
                 String block = blockDatanode.getKey();
-                String datanodeip = blockDatanode.getValue();
+                //String datanodeip = blockDatanode.getValue();
                 ClientDataNodeRPCInterface transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://localhost:2021/DFSDataNode");
                 //ClientDataNodeRmiInterface transRmi = (ClientDataNodeRmiInterface)Naming.lookup("rmi://"+datanodeip+":2021/DFSDataNode");
                 byte[] content = transRmi.downloadBlock(block);
@@ -343,16 +185,19 @@ public class DFSClient {
             System.out.println("[ERROR!] Failed download!");
         }
     }
-    public void removeFile(String path){
-        String DFSPath = getAbsolutelyPath(path);
+
+    /**
+     * @param dfsPath DFSç›®å½•ç»å¯¹è·¯å¾„
+     */
+    public void removeFile(String dfsPath){
         try{
-            // ÏòNameNodeÑ¯ÎÊÄ³ÎÄ¼şµÄÊı¾İ¿é±êÊ¶¼°Êı¾İ½Úµã
-            // ·µ»ØÊı¾İ¿é±êÊ¶ºÍ´æ´¢Êı¾İ½Úµã
-            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.removeDFSFile(DFSPath);
+            // å‘NameNodeè¯¢é—®æŸæ–‡ä»¶çš„æ•°æ®å—æ ‡è¯†åŠæ•°æ®èŠ‚ç‚¹
+            // è¿”å›æ•°æ®å—æ ‡è¯†å’Œå­˜å‚¨æ•°æ®èŠ‚ç‚¹
+            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.removeDFSFile(dfsPath);
             int i = 1;
             for (Map.Entry<String, String> blockDatanode:blockDatanodes){
                 String block = blockDatanode.getKey();
-                String datanodeip = blockDatanode.getValue();
+                //String datanodeip = blockDatanode.getValue();
                 ClientDataNodeRPCInterface transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://localhost:2021/DFSDataNode");
                 //ClientDataNodeRmiInterface transRmi = (ClientDataNodeRmiInterface)Naming.lookup("rmi://"+datanodeip+":2021/DFSDataNode");
                 transRmi.deleteBlock(block);
@@ -364,21 +209,21 @@ public class DFSClient {
         }
     }
     /**
-     * ¶ÁÈë±¾µØÎÄ¼ş£¬½«×Ö½ÚÁ÷´æÔÚbyte[]ÖĞ
-     * @param localFile
-     * @return
+     * è¯»å…¥æœ¬åœ°æ–‡ä»¶ï¼Œå°†å­—èŠ‚æµå­˜åœ¨byte[]ä¸­
+     * @param localFile æœ¬åœ°æ–‡ä»¶çš„ç»å¯¹è·¯å¾„æˆ–ç›¸å¯¹è·¯å¾„
+     * @return è¿”å›åˆ‡å‰²åçš„byteæ•°æ®å—åˆ—è¡¨
      */
-    public ArrayList<byte[]> transToByte(File localFile) throws IOException{
+    private ArrayList<byte[]> transToByte(File localFile) throws IOException{
         ArrayList<byte[]> byteBlocks = new ArrayList<byte[]>();
-        // ¼ÆËãÇĞ¸îblocks¸öÊı
+        // è®¡ç®—åˆ‡å‰²blocksä¸ªæ•°
         long bytelength = localFile.length();
-        int blocks_num = (int)(bytelength / blockSize);   // block´óĞ¡Îª64M
+        int blocks_num = (int)(bytelength / blockSize);   // blockå¤§å°ä¸º64M
         if (localFile.length() % blockSize != 0)
             blocks_num++;
         BufferedInputStream bufIn = new BufferedInputStream(new FileInputStream(localFile));
         for(int i = 0; i < blocks_num; ++i){
             int blockLength = (int)Math.min((long)blockSize, bytelength);
-            byte[] content = new byte[blockLength];    // Ã¿¸öbyte 64M
+            byte[] content = new byte[blockLength];    // æ¯ä¸ªbyte 64M
             bufIn.read(content, 0, blockLength);
             byteBlocks.add(content);
             bytelength -= blockSize;

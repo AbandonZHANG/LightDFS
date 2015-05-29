@@ -36,7 +36,7 @@ public class DFSNameNode {
         System.out.println("***************************************************************************");
     }
     /**
-     * 从控制台读取用户命令
+     * 浠庢帶鍒跺彴璇诲彇鐢ㄦ埛鍛戒护
      */
     public void readUserCommand(){
         String userCmd;

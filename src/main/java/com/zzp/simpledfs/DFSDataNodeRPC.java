@@ -14,16 +14,23 @@ import java.util.Properties;
  * Created by Zhipeng Zhang on 15/05/26 0026.
  */
 public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNodeRPCInterface, Runnable{
-    Registry registry;                              // RMI Registry
-    String datanodeIp, datanodePort,namenodeIp,namenodePort;
-    String blocksDirectory,absoluteBlockDirectory;  // Êı¾İ¿é´æ´¢Ä¿Â¼
-    ArrayList<String> blocks;  // ´ËÊı¾İ½ÚµãÉÏµÄÊı¾İ¿éÁĞ±í
-    String datanodeID;  // Éè±¸±êÊ¶£ºDN-IP-Port
-    final DFSDataNodeJump jump = new DFSDataNodeJump();
-
     DFSDataNodeRPC() throws RemoteException {
         super();
     }
+
+    Registry registry;  // RMI Registry
+    String datanodeIp, datanodePort, namenodeIp, namenodePort;
+    String blocksDirectory, absoluteBlockDirectory;  // æ•°æ®å—å­˜å‚¨ç›®å½•
+    ArrayList<String> blocks;  // æ­¤æ•°æ®èŠ‚ç‚¹ä¸Šçš„æ•°æ®å—åˆ—è¡¨
+    String datanodeID;  // è®¾å¤‡æ ‡è¯†ï¼šDN-IP-Port
+
+    private class JumpProperties{
+        String datanodeName;
+        int perSeconds;     // æ¯éš”N mså‘é€ä¸€æ¬¡å¿ƒè·³
+        int errorNumToQuit; //è¿ç»­Næ¬¡æ²¡æœ‰è¿æ¥ä¸ŠNameNodeå°±é€€å‡º
+    }
+    private final JumpProperties jumpProperties = new JumpProperties();
+
     public void run(){
         if(register()){
             System.out.println("[SUCCESS!] Register Successful!");
@@ -35,12 +42,12 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
 
         sendBlockRecord();
 
-        sendNodeStates();
+        sendJump();
 
         try{
-            // Æô¶¯ rmiregistry
+            // å¯åŠ¨ rmiregistry
             registry = LocateRegistry.createRegistry(2021);
-            // °ó¶¨ RMI ·şÎñ
+            // ç»‘å®š RMI æœåŠ¡
             Naming.rebind("rmi://localhost:2021/DFSDataNode", this);
             //System.out.println("The DataNode RMI is running...");
         }
@@ -49,18 +56,15 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
         }
     }
     public void initialize(){
-        // ¶ÁÈ¡ÅäÖÃÎÄ¼şdatanode_properties.xml
+        // è¯»å–é…ç½®æ–‡ä»¶datanode_properties.xml
         readConfigFile();
 
-        // ³õÊ¼»¯£¬¶ÁÈ¡Êı¾İ¿éÄ¿Â¼
+        // åˆå§‹åŒ–ï¼Œè¯»å–æ•°æ®å—ç›®å½•
         blocks = new ArrayList<String>();
         loadLocalBlocks(new File(absoluteBlockDirectory));
-
-        //Éú³É DataNode ID
-        datanodeID = "DN-" + datanodeIp + "-" + datanodePort;
     }
     /**
-     * ¶ÁÈ¡ Properties ÅäÖÃÎÄ¼ş:datanode.xml
+     * è¯»å– Properties é…ç½®æ–‡ä»¶:datanode.xml
      */
     public void readConfigFile(){
         Properties props = new Properties();
@@ -72,37 +76,42 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
             if(datanodeIp.equals(""))
                 datanodeIp = InetAddress.getLocalHost().toString();
             datanodePort = props.getProperty("port");
+            //ç”Ÿæˆ DataNode ID
+            datanodeID = "DN-" + datanodeIp + "-" + datanodePort;
+
             namenodeIp = props.getProperty("namenodeip");
             namenodePort = props.getProperty("namenodeport");
+
             blocksDirectory = props.getProperty("blockdir");
             absoluteBlockDirectory = System.getProperty("user.dir")+"\\"+blocksDirectory;
+
+            jumpProperties.perSeconds = Integer.valueOf(props.getProperty("perseconds"));
+            jumpProperties.errorNumToQuit = Integer.valueOf(props.getProperty("errornumtoquitjump"));
+            jumpProperties.datanodeName = datanodeID;
         }
         catch (Exception e){
             System.out.println("[ERROR!] Read config file error!");
         }
     }
     /**
-     * ¶ÁÈ¡±¾µØÊı¾İ¿éÁĞ±í
+     * è¯»å–æœ¬åœ°æ•°æ®å—åˆ—è¡¨
      * @param path
      */
     public void loadLocalBlocks(File path){
         blocks.clear();
-        if(!path.isDirectory()){
-            return;
-        }
-        else{
+        if(path.isDirectory()){
             File[] blockFiles = path.listFiles();
-            for(File blockFile:blockFiles){
-                if(blockFile.isDirectory()){
-                }
-                else{
-                    blocks.add(blockFile.getName());
+            if(blockFiles != null) {
+                for (File blockFile : blockFiles) {
+                    if (!blockFile.isDirectory()) {
+                        blocks.add(blockFile.getName());
+                    }
                 }
             }
         }
     }
     /**
-     * ÁĞ³öµ±Ç°Êı¾İ½ÚµãÖĞµÄËùÓĞÊı¾İ¿éÁĞ±í
+     * åˆ—å‡ºå½“å‰æ•°æ®èŠ‚ç‚¹ä¸­çš„æ‰€æœ‰æ•°æ®å—åˆ—è¡¨
      */
     public void listBlocks(){
         System.out.println("This DataNode has following blocks:");
@@ -110,18 +119,26 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
             System.out.println("[Blocks]"+block);
         }
     }
+    public DFSDataNodeState getCurrentState(){
+        DFSDataNodeState myState = new DFSDataNodeState();
+        myState.datanodeID = datanodeID;
+        myState.ip = datanodeIp;
+        myState.port = datanodePort;
+        File workDir = new File(System.getProperty("user.dir"));
+        myState.totalSpace = workDir.getTotalSpace();
+        myState.freeSpace = workDir.getFreeSpace();
+        myState.usedSpace = workDir.getUsableSpace();
+        return myState;
+    }
     /**
-     * ÏòÖ÷¿Ø·şÎñÆ÷ÇëÇóÁ¬½Ó
+     * å‘ä¸»æ§æœåŠ¡å™¨è¯·æ±‚è¿æ¥
      */
     public boolean register(){
         System.out.println("[INFO] Sending register application to the namenode ...");
+        DFSDataNodeState myState = getCurrentState();
         try{
-            DFSDataNodeState myState = jump.mystate;
-            myState.ip = datanodeIp;
-            myState.port = datanodePort;
-            myState.datanodeID = datanodeID;
-            DataNodeNameNodeRPCInterface datanode = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
-            return datanode.registerDataNode(myState);
+            DataNodeNameNodeRPCInterface datanodeRPC = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
+            return datanodeRPC.registerDataNode(myState);
         }
         catch (Exception e){
             System.out.println("[ERROR!] The Namenode RMI serve is not found!");
@@ -129,55 +146,66 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
         return false;
     }
     /**
-     * ÏòÖ÷¿Ø·şÎñÆ÷·¢ËÍ±¾µØÊı¾İ¿éÄ¿Â¼
+     * å‘ä¸»æ§æœåŠ¡å™¨å‘é€æœ¬åœ°æ•°æ®å—ç›®å½•
      */
     public void sendBlockRecord(){
         System.out.println("[INFO] Sending block records to the namenode ...");
         try{
-            DataNodeNameNodeRPCInterface datanode = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
-            datanode.sendDataNodeBlockList(datanodeID, blocks);
+            DataNodeNameNodeRPCInterface datanodeRPC = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
+            datanodeRPC.sendDataNodeBlockList(datanodeID, blocks);
             System.out.println("[SUCCESS!] Sending block records successful! ...");
         }
         catch (Exception e){
             System.out.println("[ERROR!] The Namenode RMI serve is not found!");
         }
     }
-
-    /**
-     * ÏòÖ÷¿Ø·şÎñÆ÷·¢ËÍĞÄÌø°ü
-     */
     public void sendNodeStates(){
+        DFSDataNodeState myState = getCurrentState();
+        try {
+            DataNodeNameNodeRPCInterface datanodeRPC = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
+            datanodeRPC.sendDataNodeStates(myState);
+        }
+        catch (Exception e){
+            System.out.println("[ERROR!] The Namenode RMI serve is not found!");
+        }
+    }
+    /**
+     * å‘ä¸»æ§æœåŠ¡å™¨å‘é€å¿ƒè·³åŒ…ã€‚å¿ƒè·³åŒ…ä¸åŒ…å«ä»»ä½•ä¿¡æ¯ï¼Œä»…ä¸ºç¡®è®¤DataNodeå­˜æ´»
+     */
+    public void sendJump(){
         System.out.println("[INFO] Sending node states to the namenode ...");
-        jump.workingDirectory = System.getProperty("user.dir");;     // ÉèÖÃµ±Ç°Ä¿Â¼ÎªÊı¾İ·şÎñÆ÷¹¤×÷Ä¿Â¼
-        jump.mystate.ip = datanodeIp;
-        jump.mystate.port = datanodePort;
-        jump.mystate.datanodeID = datanodeID;
-        // ThreadÀàµÄstart()²ÅÄÜÊµÏÖÏß³Ì,run()Ö»ÊÇÆÕÍ¨µÄÀàµ÷ÓÃ
+        DFSDataNodeJump jump = new DFSDataNodeJump(jumpProperties.datanodeName, jumpProperties.perSeconds, jumpProperties.errorNumToQuit);
+        // Threadç±»çš„start()æ‰èƒ½å®ç°çº¿ç¨‹,run()åªæ˜¯æ™®é€šçš„ç±»è°ƒç”¨
         jump.start();
     }
     public void unRegister(){
         System.out.println("[INFO] Sending unregister request to the namenode ...");
         try{
-            DataNodeNameNodeRPCInterface datanode = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
-            datanode.unRegisterDataNode(datanodeID);
+            DataNodeNameNodeRPCInterface datanodeRPC = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
+            datanodeRPC.unRegisterDataNode(datanodeID);
         }
         catch (Exception e){
             System.out.println("[ERROR!] The Namenode RMI serve is not found!");
         }
     }
     public void close(){
-        // ÏòNameNode·¢ËÍ×¢ÏúÉêÇë
+        // å‘NameNodeå‘é€æ³¨é”€ç”³è¯·
         unRegister();
-        // ¹Ø±ÕRMI·şÎñ
+        // å…³é—­RMIæœåŠ¡
         try{
             UnicastRemoteObject.unexportObject(registry, true);
-            //System.out.println("The DataNode RMI is done...");
             System.exit(0);
         }
         catch (Exception e){
             e.printStackTrace();
         }
     }
+
+    /**
+     * @param content
+     * @param blockName
+     * @throws RemoteException
+     */
     @Override
     public void uploadBlock(byte[] content, String blockName)throws RemoteException{
         File wfile = new File(absoluteBlockDirectory+"\\"+blockName);
@@ -189,21 +217,19 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
                 throw new RemoteException("Failed to create remote directory!");
             }
         }
-        if(!wfile.exists()){
-            try{
-                wfile.createNewFile();
-            }
-            catch (Exception e){
-                throw new RemoteException("Failed to create remote file!");
-            }
+        if(wfile.exists()){
+            wfile.delete();
         }
         try{
+            wfile.createNewFile();
             BufferedOutputStream bufOut = new BufferedOutputStream(new FileOutputStream(wfile));
             bufOut.write(content);
             bufOut.flush();
             bufOut.close();
-            // ÏòNameNode·¢ËÍ¸üĞÂºóµÄÊı¾İ¿éÄ¿Â¼
+            // å‘é€æ›´æ–°åçš„æ•°æ®å—ç›®å½•
             sendBlockRecord();
+            // å‘é€æ›´æ–°åçš„ç¡¬ç›˜ç©ºé—´
+            sendNodeStates();
         }
         catch (Exception e){
             throw new RemoteException("Failed to write remote data!");
@@ -237,8 +263,10 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
         }
         else{
             rFile.delete();
-            // ÏòNameNode·¢ËÍ¸üĞÂºóµÄÊı¾İ¿éÄ¿Â¼
+            // å‘é€æ›´æ–°åçš„æ•°æ®å—ç›®å½•
             sendBlockRecord();
+            // å‘é€æ›´æ–°åçš„ç¡¬ç›˜ç©ºé—´
+            sendNodeStates();
         }
     }
 }

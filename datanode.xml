@@ -1,20 +1,26 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>  
+<?xml version="1.0" encoding="UTF-8"?>  
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>  
-    <comment>DataNode配置文件</comment>
-    <!-- DataNode ip -->
+    <comment>数据服务器配置文件</comment>
+    <!-- DataNode ip地址 -->
 	<entry  
         key="ip"></entry>
-	<!-- DataNode 服务端口号 -->
+	<!-- DataNode RMI 端口号 -->
     <entry  
         key="port">50002</entry>
-	<!-- 连接的NameNode ip -->	
+	<!-- 连接的 NameNode ip -->	
     <entry  
         key="namenodeip"></entry>
-	<!-- 连接的NameNode 服务端口号 -->	
+	<!-- 连接的 NameNode RMI 端口号 -->	
     <entry  
         key="namenodeip"></entry>
 	<!-- 数据块存储目录 -->
     <entry  
         key="blockdir">datablocks</entry>
+	<!-- 每隔几毫秒发送一次心跳 -->
+    <entry  
+        key="perseconds">60000</entry>
+	<!-- 连续几次没有连接上NameNode就退出心跳线程 -->
+    <entry  
+        key="errornumtoquitjump">3</entry>
 </properties>

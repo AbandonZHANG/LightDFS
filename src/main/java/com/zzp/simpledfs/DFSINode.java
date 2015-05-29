@@ -8,8 +8,14 @@ import java.util.Iterator;
  * Created by Zhipeng Zhang on 15/05/25 0025.
  */
 public class DFSINode implements Serializable {
-    String name;    // 文件or目录名称
-    HashMap<String, DFSINode> childInode;   // childInode == null 表示该节点是文件, childInode != null 表示该节点是目录
+    String name;    // 鏂囦欢or鐩綍鍚嶇О
+    HashMap<String, DFSINode> childInode;   // childInode == null 琛ㄧず璇ヨ妭鐐规槸鏂囦欢, childInode != null 琛ㄧず璇ヨ妭鐐规槸鐩綍
+    //DFSINode(){}
+    DFSINode(String _name, boolean ifDir){
+        name = _name;
+        if(ifDir)
+            childInode = new HashMap<String, DFSINode>();
+    }
     /**
      * @param inode
      * @param depth

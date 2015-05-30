@@ -6,7 +6,7 @@ import java.util.*;
  * Created by Zhipeng Zhang on 15/05/26 0026.
  */
 public class DFSClientConsole {
-    DFSClient dfsClient = new DFSClient();
+    DFSClient dfsClient;
     final Stack<String> dir = new Stack<String>();  // 当前client所在DFS目录，初始为根目录root
 
     public static void main(String[] args){

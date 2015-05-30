@@ -4,20 +4,23 @@ import java.io.*;
 import java.nio.file.FileAlreadyExistsException;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * Created by Zhipeng Zhang on 15/05/29 0029.
  */
 public class DFSClient {
-    ClientNameNodeRPCInterface clientRmi;
-    String namenodeIp, namenodePort;  // 连接的NameNode ip, port
-    int blockSize;
-    DFSClient(){
+    private ClientNameNodeRPCInterface clientRmi;
+    //private String nodeID;      // 设备唯一识别码UUID，用于服务端验证登陆
+    private String loginUserName;    // 当前登陆用户名
+    private String namenodeIp, namenodePort;  // 连接的NameNode ip, port
+    private int blockSize;
+    DFSClient(String userName, String password){
         // 读取配置文件client.xml
         readConfigFile("client.xml");
+
+        // 生成、读取设备唯一识别码UUID
+        // getNodeID();
 
         try {
             clientRmi = (ClientNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
@@ -27,6 +30,8 @@ public class DFSClient {
             System.out.println("[ERROR!] Can't link to the NameNode RMI Server!");
             System.exit(0);
         }
+
+        login(userName, password);
     }
     private void readConfigFile(String file){
         Properties props = new Properties();
@@ -44,16 +49,69 @@ public class DFSClient {
         }
     }
 
+//    private String getNodeID(){
+//        File ipFile = new File("device");
+//        String res = null;
+//        try {
+//            if(ipFile.exists()){
+//                Scanner in = new Scanner(new FileInputStream(ipFile));
+//                res = in.next();
+//            }
+//            else{
+//                ipFile.createNewFile();
+//                res = UUID.randomUUID().toString();
+//                BufferedWriter bufWriter = new BufferedWriter(new FileWriter(ipFile));
+//                bufWriter.write(res);
+//            }
+//        }
+//        catch (IOException e){
+//        }
+//        return res;
+//    }
+
     public boolean registerUser(String userName, String password){
-        
-        return false;
+        boolean res = false;
+        try{
+            res = clientRmi.registerUser(userName, DFSBase64.Base64Encode(password));
+        }
+        catch(RemoteException e){
+            System.out.println("[ERROR!] The namenode RMI serve is not found!");
+        }
+        return res;
     }
+
+    public boolean unRegisterUser(String userName, String password){
+        boolean res = false;
+        try{
+            res = clientRmi.unRegisterUser(userName, DFSBase64.Base64Encode(password));
+        }
+        catch(RemoteException e){
+            System.out.println("[ERROR!] The namenode RMI serve is not found!");
+        }
+        return res;
+    }
+
+    public boolean login(String userName, String password){
+        boolean res = false;
+        try{
+            res = clientRmi.login(userName, password);
+        }
+        catch(RemoteException e){
+            System.out.println("[ERROR!] The namenode RMI serve is not found!");
+        }
+        return res;
+    }
+
+    public void logout(){
+
+    }
+
     /**
      * @param dfsPath DFS目录绝对路径
      */
     public void mkdir(String dfsPath){
         try{
-            clientRmi.addDFSDirectory(dfsPath);
+            clientRmi.addDFSDirectory(loginUserName, dfsPath);
         }
         catch (FileNotFoundException e){
             System.out.println("[ERROR!] Illegal path!");
@@ -72,7 +130,7 @@ public class DFSClient {
     public void rmdir(String dfsPath){
         // ！！！需要检查是否为当前目录或当前父目录，不能删除
         try{
-            clientRmi.delDFSDirectory(dfsPath);
+            clientRmi.delDFSDirectory(loginUserName, dfsPath);
         }
         catch (FileNotFoundException e){
             System.out.println("[ERROR!] Illegal path!");
@@ -88,7 +146,7 @@ public class DFSClient {
      */
     public boolean checkdir(String dfsPath) throws RemoteException{
         boolean res = false;
-        res = clientRmi.ifExistsDFSDirectory(dfsPath);
+        res = clientRmi.ifExistsDFSINode(loginUserName, dfsPath);
         return res;
     }
 
@@ -98,7 +156,7 @@ public class DFSClient {
      */
     public void renameFile(String originPath, String newPath){
         try{
-            clientRmi.renameDFSFile(originPath, newPath);
+            clientRmi.renameDFSFile(loginUserName, originPath, newPath);
         }
         catch (FileNotFoundException e){
             System.out.println("[ERROR!] Illegal origin file path!");
@@ -121,7 +179,7 @@ public class DFSClient {
             ArrayList<byte[]> byteblocks = transToByte(new File(localFilePath));
             // 向NameNode发送请求，新建Inode文件节点，分配数据块标识，分配数据节点
             // 返回数据块标识和存储数据节点
-            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.newDFSFileMapping(dfsPath, byteblocks.size(), false);
+            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.newDFSFileMapping(loginUserName, dfsPath, byteblocks.size(), false);
             if(blockDatanodes == null){
                 System.out.println("[ERROR!] File block not found!");
                 return ;
@@ -158,7 +216,7 @@ public class DFSClient {
         try{
             // 向NameNode询问某文件的数据块标识及数据节点
             // 返回数据块标识和存储数据节点
-            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.lookupFileBlocks(dfsPath);
+            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.lookupFileBlocks(loginUserName, dfsPath);
             System.out.println("[INFO] Find "+blockDatanodes.size()+" blocks, begin to download...");
             File wfile = new File(localPath);
             BufferedOutputStream bufOut = new BufferedOutputStream(new FileOutputStream(wfile));
@@ -193,7 +251,7 @@ public class DFSClient {
         try{
             // 向NameNode询问某文件的数据块标识及数据节点
             // 返回数据块标识和存储数据节点
-            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.removeDFSFile(dfsPath);
+            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.removeDFSFile(loginUserName, dfsPath);
             int i = 1;
             for (Map.Entry<String, String> blockDatanode:blockDatanodes){
                 String block = blockDatanode.getKey();

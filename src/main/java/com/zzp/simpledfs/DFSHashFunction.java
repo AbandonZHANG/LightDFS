@@ -1,7 +1,5 @@
 package main.java.com.zzp.simpledfs;
-//package main.java.com.zzp.simpledfs;
 /**
- * Created by Zhipeng Zhang on 15/05/25 0025.
  * —— HBase - MurmurHash3.java
  *
  * MurmurHash3 is a very fast, non-cryptographic hash suitable for general hash-based
@@ -11,11 +9,6 @@ package main.java.com.zzp.simpledfs;
  * the 32-bit version targets low latency for hash table use.
 */
 public class DFSHashFunction {
-//    private static DFSHashFunction _instance = new DFSHashFunction();
-//
-//    public static DFSHashFunction getInstance() {
-//        return _instance;
-//    }
     public static int hash(String key){
         byte[] keyBytes = key.getBytes();
         return hash(keyBytes, 0, keyBytes.length, 0);

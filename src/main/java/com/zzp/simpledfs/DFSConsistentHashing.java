@@ -5,9 +5,6 @@ import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.UUID;
 
-/**
- * Created by Zhipeng Zhang on 15/05/25 0025.
- */
 public class DFSConsistentHashing {
     static private long unitSpace = 64*1024*1024;  // 每unitSpace MB硬盘空间一个虚拟节点, 默认64MB
     public static void setUnitSpace(int unitSpace) {

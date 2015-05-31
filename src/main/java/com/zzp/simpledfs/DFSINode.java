@@ -4,9 +4,6 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Iterator;
 
-/**
- * Created by Zhipeng Zhang on 15/05/25 0025.
- */
 public class DFSINode implements Serializable {
     String name;    // 文件or目录名称
     HashMap<String, DFSINode> childInode;   // childInode == null 表示该节点是文件, childInode != null 表示该节点是目录

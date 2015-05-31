@@ -2,9 +2,6 @@ package main.java.com.zzp.simpledfs;
 
 import java.util.Scanner;
 
-/**
- * Created by Zhipeng Zhang on 15/05/25 0025.
- */
 public class DFSNameNode {
     DFSNameNodeRPC rpcService;
     public static void main(String[] args){
@@ -51,7 +48,7 @@ public class DFSNameNode {
             else if(cmdArray[0].equals("start")){
                 rpcService.run();
             }
-            else if(cmdArray[0].equals("shutdown")){
+            else if(cmdArray[0].equals("close")){
                 rpcService.close();
             }
             else if(cmdArray[0].equals("ls")){
@@ -74,7 +71,7 @@ public class DFSNameNode {
         System.out.println("");
         System.out.println("The SimpleDFS NameNode commands are:");
         System.out.println("    start         Start the server job.");
-        System.out.println("    shutdown      Shutdown the server job.");
+        System.out.println("    close         Close the server job.");
         System.out.println("    ls            List the DFS directory.");
         System.out.println("    lsblocks      List the blocks list.");
         System.out.println("    lsfbmap       List the file-blocks list.");

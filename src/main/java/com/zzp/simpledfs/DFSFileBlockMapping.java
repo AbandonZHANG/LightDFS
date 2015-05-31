@@ -3,9 +3,6 @@ package main.java.com.zzp.simpledfs;
 import java.io.Serializable;
 import java.util.ArrayList;
 
-/**
- * Created by Zhipeng Zhang on 15/05/25 0025.
- */
 public class DFSFileBlockMapping implements Serializable {
     String filePath;    // 文件在DFS目录下的绝对路径
     boolean ifLittleFile;   // 是否是小文件：小文件合并，大文件切割

@@ -2,9 +2,6 @@ package main.java.com.zzp.simpledfs;
 
 import java.rmi.Naming;
 
-/**
- * Created by Zhipeng Zhang on 15/05/26 0026.
- */
 public class DFSDataNodeJump extends Thread{
     String datanodeName;
     int perSeconds;  // 每隔N ms发送一次心跳

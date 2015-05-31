@@ -10,9 +10,6 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Properties;
 
-/**
- * Created by Zhipeng Zhang on 15/05/26 0026.
- */
 public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNodeRPCInterface, Runnable{
     DFSDataNodeRPC() throws RemoteException {
         super();

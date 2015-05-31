@@ -2,9 +2,6 @@ package main.java.com.zzp.simpledfs;
 
 import java.io.Serializable;
 
-/**
- * Created by Zhipeng Zhang on 15/05/25 0025.
- */
 public class DFSDataNodeState implements Serializable {
     String datanodeID;
     String ip, port;

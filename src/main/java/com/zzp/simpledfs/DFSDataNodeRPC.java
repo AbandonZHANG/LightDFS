@@ -16,6 +16,7 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
     }
 
     Registry registry;  // RMI Registry
+    DataNodeNameNodeRPCInterface datanodeRPC;
     String datanodeIp, datanodePort, namenodeIp, namenodePort;
     String blocksDirectory, absoluteBlockDirectory;  // 数据块存储目录
     ArrayList<String> blocks;  // 此数据节点上的数据块列表
@@ -29,6 +30,13 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
     private final JumpProperties jumpProperties = new JumpProperties();
 
     public void run(){
+        try{
+            datanodeRPC = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+
         if(register()){
             System.out.println("[SUCCESS!] Register Successful!");
         }
@@ -134,7 +142,6 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
         System.out.println("[INFO] Sending register application to the namenode ...");
         DFSDataNodeState myState = getCurrentState();
         try{
-            DataNodeNameNodeRPCInterface datanodeRPC = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
             return datanodeRPC.registerDataNode(myState);
         }
         catch (Exception e){
@@ -148,7 +155,6 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
     public void sendBlockRecord(){
         System.out.println("[INFO] Sending block records to the namenode ...");
         try{
-            DataNodeNameNodeRPCInterface datanodeRPC = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
             datanodeRPC.sendDataNodeBlockList(datanodeID, blocks);
             System.out.println("[SUCCESS!] Sending block records successful! ...");
         }
@@ -159,7 +165,6 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
     public void sendNodeStates(){
         DFSDataNodeState myState = getCurrentState();
         try {
-            DataNodeNameNodeRPCInterface datanodeRPC = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
             datanodeRPC.sendDataNodeStates(myState);
         }
         catch (Exception e){
@@ -178,7 +183,6 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
     public void unRegister(){
         System.out.println("[INFO] Sending unregister request to the namenode ...");
         try{
-            DataNodeNameNodeRPCInterface datanodeRPC = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
             datanodeRPC.unRegisterDataNode(datanodeID);
         }
         catch (Exception e){

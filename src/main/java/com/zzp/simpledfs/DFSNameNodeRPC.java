@@ -291,6 +291,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         if(checkNodeConnection(datanode.datanodeID) == 1){
             // 标记服务器已连接
             excludeNodes.remove(datanode.datanodeID);
+            datanodeStates.put(datanode.datanodeID, datanode);
             // 注册一致性哈希
             consistentHash.addNode(datanode.datanodeID, datanode.freeSpace);
             return true;
@@ -460,33 +461,26 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
             UUID newUUID = UUID.randomUUID();
             // 加入到file的block列表中
             newFileBlockMapping.blocks.add(newUUID.toString());
-        }
 
-        // 为数据块分配数据节点-负载均衡
-        // 先取第一个数据节点
-        // ！！！这里如果没有数据节点，以上需要回滚
-        Iterator iter = datanodeStates.entrySet().iterator();
-        // 找到可分配的数据节点
-        if(iter.hasNext()){
-
-            // 将File添加进Inode文件节点
-            updateDFSINode(inodePath, 11);
-
-            // 添加本次的File-Block Mapping
-            fileBlockMapping.put(inodePath, newFileBlockMapping);
-
-            Map.Entry entry = (Map.Entry)iter.next();
-            DFSDataNodeState dataState = (DFSDataNodeState)entry.getValue();
-            for (String block:newFileBlockMapping.blocks){
-                blockDatanodes.add(new AbstractMap.SimpleEntry<String, String>(block, dataState.ip));
-                // 添加Block-DataNode映射
-                blockDataNodeMappings.put(block, dataState.datanodeID);
+            // 为数据块分配数据节点-负载均衡
+            String datanodeID = consistentHash.getNode(newUUID.toString());
+            if(datanodeID == null){
+                return null;
             }
-            return blockDatanodes;
+            DFSDataNodeState dataNodeState = datanodeStates.get(datanodeID);
+
+            blockDatanodes.add(new AbstractMap.SimpleEntry<String, String>(newUUID.toString(), dataNodeState.ip));
+            // 添加Block-DataNode映射
+            blockDataNodeMappings.put(newUUID.toString(), datanodeID);
         }
-        else{
-            return null;
-        }
+
+        // 将File添加进Inode文件节点
+        updateDFSINode(inodePath, 11);
+
+        // 添加本次的File-Block Mapping
+        fileBlockMapping.put(inodePath, newFileBlockMapping);
+
+        return blockDatanodes;
     }
 
     /**

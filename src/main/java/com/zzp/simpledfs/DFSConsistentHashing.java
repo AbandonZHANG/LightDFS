@@ -57,7 +57,7 @@ public class DFSConsistentHashing {
                 // 删除多余的虚拟节点key
                 theNode.nodeKeys.remove(theNode.nodeKeys.size()-1);
                 // 删除circle中对应的值
-                chCircle.remove(delKey);
+                chCircle.remove(DFSHashFunction.hash(delKey));
                 diffNum --;
             }
         }

@@ -1,8 +1,6 @@
 package com.zzp.simpledfs.client;
 
-import com.zzp.simpledfs.common.ClientDataNodeRPCInterface;
-import com.zzp.simpledfs.common.ClientNameNodeRPCInterface;
-import com.zzp.simpledfs.common.DFSINode;
+import com.zzp.simpledfs.common.*;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -66,14 +64,14 @@ public class DFSClient {
         return res;
     }
 
-    public boolean unRegisterUser(String userName, String password) throws RemoteException{
-        boolean res = false;
+    public boolean unRegisterUser(String userName, String password) throws RemoteException, UserNotFoundException{
+        boolean res;
         res = clientRmi.unRegisterUser(userName, DFSBase64.Base64Encode(password));
         return res;
     }
 
     public boolean login(String userName, String password) throws RemoteException{
-        boolean res = false;
+        boolean res;
         res = clientRmi.login(userName, DFSBase64.Base64Encode(password));
         if(res){
             loginUserName = userName;
@@ -85,28 +83,28 @@ public class DFSClient {
         loginUserName = null;
     }
 
-    public long getUserTotalSpace() throws RemoteException{
+    public long getUserTotalSpace() throws RemoteException, UserNotFoundException{
         if(loginUserName == null)
-            return -1;
+            throw new UserNotFoundException();
         else
             return clientRmi.getUserTotalSpace(loginUserName);
     }
-    public long getUserUsedSpace() throws RemoteException{
+    public long getUserUsedSpace() throws RemoteException, UserNotFoundException{
         if(loginUserName == null)
-            return -1;
+            throw new UserNotFoundException();
         else
             return clientRmi.getUserUsedSpace(loginUserName);
     }
-    public boolean setUserTotalSpace(long totalSpace) throws RemoteException{
-        if(loginUserName == null)
-            return false;
+    public void setUserTotalSpace(long totalSpace) throws RemoteException, UserNotFoundException{
+        if(loginUserName != null)
+            throw new UserNotFoundException();
         else
-            return clientRmi.setUserTotalSpace(loginUserName, totalSpace);
+            clientRmi.setUserTotalSpace(loginUserName, totalSpace);
     }
     /**
      * @param dfsPath DFS目录绝对路径
      */
-    public boolean mkdir(String dfsPath) throws RemoteException, FileAlreadyExistsException, FileNotFoundException{
+    public boolean mkdir(String dfsPath) throws RemoteException, UserNotFoundException, FileAlreadyExistsException, FileNotFoundException{
         if(loginUserName == null)
             return false;
         else{
@@ -115,7 +113,7 @@ public class DFSClient {
         }
     }
 
-    public boolean rmdir(String dfsPath) throws RemoteException, FileNotFoundException{
+    public boolean rmdir(String dfsPath) throws RemoteException, UserNotFoundException, FileNotFoundException{
         if(loginUserName == null)
             return false;
         else {
@@ -128,7 +126,7 @@ public class DFSClient {
      * 检查该DFS路径是否存在
      * @param dfsPath DFS目录绝对路径
      */
-    public boolean checkdir(String dfsPath) throws RemoteException{
+    public boolean checkdir(String dfsPath) throws RemoteException, UserNotFoundException{
         boolean res = false;
         if(loginUserName == null)
             return false;
@@ -136,7 +134,7 @@ public class DFSClient {
         return res;
     }
 
-    public DFSINode getINode(String dfsPath) throws RemoteException, FileNotFoundException{
+    public DFSINode getINode(String dfsPath) throws RemoteException, UserNotFoundException, FileNotFoundException{
         if(loginUserName == null)
             return null;
         return clientRmi.getDFSINode(loginUserName, dfsPath);
@@ -146,7 +144,7 @@ public class DFSClient {
      * @param originPath 原DFS目录绝对路径
      * @param newPath 新DFS目录绝对路径
      */
-    public boolean renameFile(String originPath, String newPath) throws FileNotFoundException, FileAlreadyExistsException, RemoteException{
+    public boolean renameFile(String originPath, String newPath) throws FileNotFoundException, UserNotFoundException, FileAlreadyExistsException, RemoteException{
         if(loginUserName == null)
             return false;
         clientRmi.renameDFSFile(loginUserName, originPath, newPath);
@@ -157,7 +155,7 @@ public class DFSClient {
      * @param localFilePath 本地文件绝对路径或者相对路径
      * @param dfsPath DFS目录绝对路径
      */
-    public boolean uploadFile(String localFilePath, String dfsPath) throws RemoteException, NotBoundException, FileAlreadyExistsException, FileNotFoundException {
+    public boolean uploadFile(String localFilePath, String dfsPath) throws RemoteException, NoEnoughSpaceException, UserNotFoundException, NotBoundException, FileAlreadyExistsException, FileNotFoundException {
         if(loginUserName == null)
             return false;
         try{
@@ -190,7 +188,7 @@ public class DFSClient {
      * @param dfsPath DFS目录绝对路径
      * @param localPath 本地绝对路径或者相对路径
      */
-    public boolean downloadFile(String dfsPath, String localPath) throws RemoteException, NotBoundException, FileNotFoundException{
+    public boolean downloadFile(String dfsPath, String localPath) throws RemoteException, UserNotFoundException, NotBoundException, FileNotFoundException{
         if(loginUserName == null)
             return false;
         // 向NameNode询问某文件的数据块标识及数据节点
@@ -233,7 +231,7 @@ public class DFSClient {
     /**
      * @param dfsPath DFS目录绝对路径
      */
-    public void removeFile(String dfsPath) throws RemoteException, FileNotFoundException, NotBoundException, MalformedURLException{
+    public void removeFile(String dfsPath) throws RemoteException, UserNotFoundException, FileNotFoundException, NotBoundException, MalformedURLException{
         // 向NameNode询问某文件的数据块标识及数据节点
         // 返回数据块标识和存储数据节点
         ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.removeDFSFile(loginUserName, dfsPath);

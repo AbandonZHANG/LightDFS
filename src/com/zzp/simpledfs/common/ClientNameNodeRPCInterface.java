@@ -9,31 +9,45 @@ import java.util.Map;
 
 public interface ClientNameNodeRPCInterface extends Remote {
     boolean
-        registerUser(String username, String password) throws RemoteException;
+        registerUser(String username, String password)
+            throws RemoteException;
     boolean
-        unRegisterUser(String username, String password) throws RemoteException;
+        unRegisterUser(String username, String password)
+            throws RemoteException, UserNotFoundException;
     boolean
-        login(String userName, String password) throws RemoteException;
+        login(String userName, String password)
+            throws RemoteException;
     long
-        getUserTotalSpace(String loginUserName) throws RemoteException;
+        getUserTotalSpace(String loginUserName)
+            throws RemoteException, UserNotFoundException;
     long
-        getUserUsedSpace(String loginUserName) throws RemoteException;
+        getUserUsedSpace(String loginUserName)
+            throws RemoteException, UserNotFoundException;
+    void
+        setUserTotalSpace(String userName, long totalSpace)
+            throws RemoteException, UserNotFoundException;
+    void
+        addDFSDirectory(String userName, String path)
+            throws RemoteException, FileNotFoundException, FileAlreadyExistsException, UserNotFoundException;
+    void
+        delDFSDirectory(String userName, String path)
+            throws RemoteException, FileNotFoundException, UserNotFoundException;
     boolean
-        setUserTotalSpace(String userName, long totalSpace) throws RemoteException;
-    void
-        addDFSDirectory(String userName, String path) throws RemoteException, FileNotFoundException, FileAlreadyExistsException;
-    void
-        delDFSDirectory(String userName, String path) throws RemoteException, FileNotFoundException;
-    boolean
-        ifExistsDFSINode(String userName, String path) throws RemoteException;
+        ifExistsDFSINode(String userName, String path)
+            throws RemoteException, UserNotFoundException;
     ArrayList< Map.Entry<String, String> >
-        newDFSFileMapping(String userName, String filePath, long fileSize, int blockNum) throws RemoteException, FileNotFoundException, FileAlreadyExistsException;
+        newDFSFileMapping(String userName, String filePath, long fileSize, int blockNum)
+            throws RemoteException, UserNotFoundException, NoEnoughSpaceException, FileNotFoundException, FileAlreadyExistsException;
     void
-        renameDFSFile(String userName, String filePath, String newFilePath) throws RemoteException, FileNotFoundException, FileAlreadyExistsException;
+        renameDFSFile(String userName, String filePath, String newFilePath)
+            throws RemoteException, UserNotFoundException, FileNotFoundException, FileAlreadyExistsException;
     ArrayList< Map.Entry<String, String> >
-        removeDFSFile(String userName, String filePath) throws RemoteException, FileNotFoundException;
+        removeDFSFile(String userName, String filePath)
+            throws RemoteException, UserNotFoundException, FileNotFoundException;
     ArrayList< Map.Entry<String, String> >
-        lookupFileBlocks(String userName, String filePath) throws RemoteException, FileNotFoundException;
+        lookupFileBlocks(String userName, String filePath)
+            throws RemoteException, UserNotFoundException, FileNotFoundException;
     DFSINode
-        getDFSINode(String userName, String path) throws RemoteException, FileNotFoundException;
+        getDFSINode(String userName, String path)
+            throws RemoteException, UserNotFoundException, FileNotFoundException;
 }

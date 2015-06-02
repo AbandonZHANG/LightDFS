@@ -1,9 +1,6 @@
 package com.zzp.simpledfs.namenode;
 
-import com.zzp.simpledfs.common.ClientNameNodeRPCInterface;
-import com.zzp.simpledfs.common.DFSDataNodeState;
-import com.zzp.simpledfs.common.DFSINode;
-import com.zzp.simpledfs.common.DataNodeNameNodeRPCInterface;
+import com.zzp.simpledfs.common.*;
 
 import java.io.*;
 import java.nio.file.FileAlreadyExistsException;
@@ -36,6 +33,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         // Necessary to call UnicastRemoteObject();
         super();
     };
+
     public void initialize(){
         // 读取永久化存储的Inode和FileBlock Mapping
         loadState();
@@ -51,9 +49,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
 
         readConfigFile();
     }
-    /**
-     * 载入永久化数据
-     */
+
     public void loadState(){
         File inodeFile = new File("inode");
         File filemapFile = new File("filemap");
@@ -99,9 +95,6 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         }
     }
 
-    /**
-     * Inode 和 File-Block Mapping 数据永久化
-     */
     public void storeState(){
         File inodeFile = new File("inode");
         File filemapFile = new File("filemap");
@@ -129,9 +122,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
             System.out.println("[ERROR!] Stored data file failed!");
         }
     }
-    /**
-     * 读取 Properties 配置文件:namenode.xml
-     */
+
     public void readConfigFile(){
         Properties props = new Properties();
         try{
@@ -146,6 +137,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
             System.out.println("[ERROR!] Read config file error!");
         }
     }
+
     public void run(){
         try{
             // 启动 rmiregistry
@@ -158,6 +150,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
             e.printStackTrace();
         }
     }
+
     public void close(){
         try{
             // 数据永久化
@@ -173,11 +166,6 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         }
     }
 
-    /**
-     * @param filename
-     * @param include 如果读取include文件，则为true；读取exclude文件为false
-     * @throws FileNotFoundException
-     */
     public void readIncludeFile(String filename, boolean include) throws FileNotFoundException {
         File File = new File(filename);
         if(!File.exists()){
@@ -201,18 +189,12 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         }
     }
 
-    /**
-     * 列出当前DFS中连接的数据节点中的所有数据块列表
-     */
     public void listBlocks(){
         for (Map.Entry entry : blockDataNodeMappings.entrySet()){
             System.out.println(entry.getKey() + "    Affiliated with DataNode: " + entry.getValue());
         }
     }
 
-    /**
-     * 列出文件及其数据块映射列表
-     */
     public void listFileBlockMappings(){
         // foreach
         for (Map.Entry entry : fileBlockMapping.entrySet()){
@@ -225,9 +207,8 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
     }
 
     /**
-     * 判断DataNode服务器连接状态
      * @param datanodeID
-     * @return 0:node不在白名单中; 1:node未连接; 2:node已连接
+     * @return 如果数据节点未连接返回1；如果数据节点正在连接返回2；如果数据节点不在白名单中返回0
      */
     public int checkNodeConnection(String datanodeID){
         if(includeNodes.contains(datanodeID)){
@@ -242,11 +223,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
             return 0;
         }
     }
-    /**
-     * DataNodes RMI - sendDataNodeJump
-     * @param datanodeID
-     * @throws RemoteException
-     */
+
     @Override
     public void sendDataNodeJump(String datanodeID) throws RemoteException{
         // 心跳监控
@@ -255,11 +232,6 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         }
     }
 
-    /**
-     * DataNodes RMI - sendDataNodeStates
-     * @param datanode
-     * @throws RemoteException
-     */
     @Override
     public void sendDataNodeStates(DFSDataNodeState datanode) throws RemoteException{
         // 节点状态监控
@@ -269,12 +241,6 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         }
     }
 
-    /**
-     * DataNodes RMI - sendDataNodeBlockList
-     * @param datanodeID
-     * @param blocks
-     * @throws RemoteException
-     */
     @Override
     public void sendDataNodeBlockList(String datanodeID, ArrayList<String> blocks)throws RemoteException{
         if(checkNodeConnection(datanodeID) == 2){
@@ -285,12 +251,6 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         }
     }
 
-    /**
-     * DataNodes RMI - registerDataNode
-     * @param datanode
-     * @return
-     * @throws RemoteException
-     */
     @Override
     public boolean registerDataNode(DFSDataNodeState datanode) throws RemoteException{
         if(checkNodeConnection(datanode.getDatanodeID()) == 1){
@@ -306,12 +266,6 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         }
     }
 
-    /**
-     * DataNodes RMI - unRegisterDataNode
-     * @param datanodeID
-     * @return
-     * @throws RemoteException
-     */
     @Override
     public boolean unRegisterDataNode(String datanodeID) throws RemoteException{
         if(checkNodeConnection(datanodeID) == 2){
@@ -335,13 +289,6 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         return false;
     }
 
-    /**
-     * 客户端用户注册RPC
-     * @param userName
-     * @param password
-     * @return false:user name has exists, true:accept
-     * @throws RemoteException
-     */
     @Override
     public boolean registerUser(String userName, String password) throws RemoteException{
         if(dfsUsers.containsKey(userName)){
@@ -355,14 +302,8 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         return true;
     }
 
-    /**
-     * 客户端用户注销RPC
-     * @param userName
-     * @return
-     * @throws RemoteException
-     */
     @Override
-    public boolean unRegisterUser(String userName, String password) throws RemoteException{
+    public boolean unRegisterUser(String userName, String password) throws RemoteException, UserNotFoundException{
         if(dfsUsers.containsKey(userName)){
             if(password.equals(dfsUsers.get(userName).base64Password)){
                 // 从用户列表中删除
@@ -377,16 +318,11 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
             }
         }
         else{
-            return false;
+            throw new UserNotFoundException();
         }
     }
 
-    /**
-     * @param userName
-     * @param password
-     * @return
-     * @throws RemoteException
-     */
+    @Override
     public boolean login(String userName, String password) throws RemoteException{
         if(dfsUsers.containsKey(userName)){
             DFSUser theUser = dfsUsers.get(userName);
@@ -404,78 +340,69 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         }
     }
 
-    /**
-     * @param userName
-     * @return
-     * @throws RemoteException
-     */
-    public long getUserTotalSpace(String userName) throws RemoteException{
+    @Override
+    public long getUserTotalSpace(String userName) throws RemoteException, UserNotFoundException{
         if(dfsUsers.containsKey(userName)){
             return dfsUsers.get(userName).maxSpace;
         }
         else{
-            return -1;
+            throw new UserNotFoundException();
         }
     }
 
-    public long getUserUsedSpace(String userName) throws RemoteException{
+    @Override
+    public long getUserUsedSpace(String userName) throws RemoteException, UserNotFoundException{
         if(dfsUsers.containsKey(userName)){
             return dfsUsers.get(userName).usedSpace;
         }
         else{
-            return -1;
+            throw new UserNotFoundException();
         }
     }
 
-    public boolean setUserTotalSpace(String userName, long totalSpace) throws RemoteException{
+    @Override
+    public void setUserTotalSpace(String userName, long totalSpace) throws RemoteException, UserNotFoundException{
         if(dfsUsers.containsKey(userName)){
             dfsUsers.get(userName).maxSpace = totalSpace;
-            return true;
         }
         else{
-            return false;
+            throw new UserNotFoundException();
         }
     }
 
-    /**
-     * Clients RMI - getDFSINode
-     * @param userName
-     * @param path
-     * @return
-     *          null: 找不到该节点(ifLogin == true)，或者未登录(ifLogin == false)
-     *          DFSINode: 找到的DFSINode
-     * @throws RemoteException
-     * @throws FileNotFoundException
-     */
     @Override
-    public DFSINode getDFSINode(String userName, String path) throws RemoteException, FileNotFoundException{
+    public DFSINode getDFSINode(String userName, String path) throws RemoteException, UserNotFoundException, FileNotFoundException{
         DFSINode theInode = null;
         String inodePath = getINodePath(userName, path);
         try {
-            theInode = updateDFSINode(inodePath, 0);
+            theInode = DFSINode.updateDFSINode(inode, inodePath, 0);
         } catch (FileAlreadyExistsException e) {
             System.out.println("updateDFSInode function error!");
         }
         return theInode;
     }
 
-    /**
-     * Clients RMI - newDFSFileMapping
-     * @param filePath
-     * @param blockNum
-     * @return
-     *
-     * @throws RemoteException
-     * @throws FileNotFoundException
-     * @throws FileAlreadyExistsException
-     */
     @Override
-    public ArrayList< Map.Entry<String, String> > newDFSFileMapping(String userName, String filePath, long fileSize, int blockNum) throws RemoteException, FileNotFoundException, FileAlreadyExistsException {
+    public ArrayList< Map.Entry<String, String> >
+    newDFSFileMapping(String userName,
+                      String filePath,
+                      long fileSize,
+                      int blockNum)
+            throws RemoteException, UserNotFoundException, NoEnoughSpaceException, FileNotFoundException, FileAlreadyExistsException {
+
+        if(!dfsUsers.containsKey(userName)){
+            throw new UserNotFoundException();
+        }
+        if(dfsUsers.get(userName).getFreeSpace() < fileSize){
+            throw new NoEnoughSpaceException();
+        }
+
         ArrayList< Map.Entry<String, String> > blockDatanodes = new ArrayList<Map.Entry<String, String>>();
         String inodePath = getINodePath(userName, filePath);
         // 新建File-Block Mapping节点
         DFSFileBlockMapping newFileBlockMapping = new DFSFileBlockMapping();
         newFileBlockMapping.filePath = inodePath;
+        newFileBlockMapping.fileSize = fileSize;
         newFileBlockMapping.ifLittleFile = false;
         newFileBlockMapping.blocks = new ArrayList<String>();
 
@@ -498,23 +425,19 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         }
 
         // 将File添加进Inode文件节点
-        updateDFSINode(inodePath, 11);
+        DFSINode.updateDFSINode(inode, inodePath, 11);
 
         // 添加本次的File-Block Mapping
         fileBlockMapping.put(inodePath, newFileBlockMapping);
 
+        // 更新用户已占用空间
+        dfsUsers.get(userName).usedSpace += fileSize;
+
         return blockDatanodes;
     }
 
-    /**
-     * Clients RMI - lookupFileBlocks
-     * @param filePath
-     * @return
-     * @throws RemoteException
-     * @throws FileNotFoundException
-     */
     @Override
-    public ArrayList< Map.Entry<String, String> > lookupFileBlocks(String userName, String filePath) throws RemoteException, FileNotFoundException{
+    public ArrayList< Map.Entry<String, String> > lookupFileBlocks(String userName, String filePath) throws RemoteException, UserNotFoundException, FileNotFoundException{
         ArrayList< Map.Entry<String, String> > blockDatanodes = new ArrayList<Map.Entry<String, String>>();
         String inodePath = getINodePath(userName, filePath);
         if(fileBlockMapping.containsKey(inodePath)){
@@ -534,54 +457,48 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         return blockDatanodes;
     }
 
-    /**
-     * Clients RMI - removeDFSFile
-     * @param filePath
-     * @return
-     * @throws RemoteException
-     * @throws FileNotFoundException
-     */
     @Override
-    public ArrayList< Map.Entry<String, String> > removeDFSFile(String userName, String filePath) throws RemoteException, FileNotFoundException{
-        ArrayList< Map.Entry<String, String> > blockDatanodes = new ArrayList<Map.Entry<String, String>>();
+    public ArrayList< Map.Entry<String, String> > removeDFSFile(String userName, String filePath) throws RemoteException, UserNotFoundException, FileNotFoundException{
+        if(!dfsUsers.containsKey(userName)){
+            throw new UserNotFoundException();
+        }
+
+        ArrayList< Map.Entry<String, String> > blockDatanodes = new ArrayList<>();
         String inodePath = getINodePath(userName, filePath);
+        // 删除对应INode节点信息
         try{
-            // del the origin file
-            updateDFSINode(inodePath, 12);
+            DFSINode.updateDFSINode(inode, inodePath, 12);
         }
         catch (FileAlreadyExistsException e){
             System.out.println("updateDFSInode function error!");
         }
+        // 删除对应的文件-数据块映射以及获取数据块列表和数据节点列表
+        long fileSize = 0;
         if(fileBlockMapping.containsKey(inodePath)){
-            // get the file mapping
+            // 获取文件对应的数据块列表
             DFSFileBlockMapping fileBlocks = fileBlockMapping.get(inodePath);
-            // delete the file-block mapping
+            fileSize = fileBlocks.fileSize;
+            // 删除对应的文件-数据块列表
             fileBlockMapping.remove(inodePath);
+            // 获取所有数据块对应的数据节点
             for (String block:fileBlocks.blocks){
-                // 在数据块-数据节点映射中查询数据块所属数据节点标识
                 String datanode = blockDataNodeMappings.get(block);
-                // 获取当前该数据节点的ip
                 String datanodeip = datanodeStates.get(datanode).getIp();
-                blockDatanodes.add(new AbstractMap.SimpleEntry<String, String>(block, datanodeip));
+                blockDatanodes.add(new AbstractMap.SimpleEntry<>(block, datanodeip));
             }
         }
         else{
             throw new FileNotFoundException();
         }
 
+        // 更新用户空间
+        dfsUsers.get(userName).usedSpace -= fileSize;
+
         return blockDatanodes;
     }
 
-    /**
-     * Clients RMI - renameDFSFile
-     * @param filePath
-     * @param newFilePath
-     * @throws RemoteException
-     * @throws FileNotFoundException
-     * @throws FileAlreadyExistsException
-     */
     @Override
-    public void renameDFSFile(String userName, String filePath, String newFilePath) throws RemoteException, FileNotFoundException, FileAlreadyExistsException{
+    public void renameDFSFile(String userName, String filePath, String newFilePath) throws RemoteException, UserNotFoundException, FileNotFoundException, FileAlreadyExistsException{
         String inodePath = getINodePath(userName, filePath);
         String newINodePath = getINodePath(userName, newFilePath);
         // 检查新文件名是否已经存在
@@ -590,7 +507,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         }
         // del the origin file
         try{
-            updateDFSINode(inodePath, 12);
+            DFSINode.updateDFSINode(inode, inodePath, 12);
         }
         catch(FileAlreadyExistsException e){
             System.out.println("updateDFSInode function error!");
@@ -599,7 +516,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         DFSFileBlockMapping tmpFileBlockMapping = fileBlockMapping.get(inodePath);
         // add the new file
         try{
-            updateDFSINode(newINodePath, 11);
+            DFSINode.updateDFSINode(inode, newINodePath, 11);
         }
         catch(FileNotFoundException e){
             System.out.println("updateDFSInode function error!");
@@ -610,56 +527,34 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         fileBlockMapping.put(newINodePath, tmpFileBlockMapping);
     }
 
-    /**
-     * Clients RMI - addDFSDirectory
-     * @param path
-     * @throws RemoteException
-     * @throws FileNotFoundException
-     * @throws FileAlreadyExistsException
-     */
     @Override
-    public void addDFSDirectory(String userName, String path) throws RemoteException, FileNotFoundException, FileAlreadyExistsException{
+    public void addDFSDirectory(String userName, String path) throws RemoteException, UserNotFoundException, FileNotFoundException, FileAlreadyExistsException{
         String inodePath = getINodePath(userName, path);
         try{
-            updateDFSINode(inodePath, 1);
+            DFSINode.updateDFSINode(inode, inodePath, 1);
         }
         catch(FileNotFoundException e){
             System.out.println("updateDFSInode function error!");
         }
     }
 
-    /**
-     * Clients RMI - delDFSDirectory
-     * @param path
-     * @throws RemoteException
-     * @throws FileNotFoundException
-     * @throws FileAlreadyExistsException
-     */
     @Override
-    public void delDFSDirectory(String userName, String path) throws RemoteException, FileNotFoundException{
+    public void delDFSDirectory(String userName, String path) throws RemoteException, UserNotFoundException, FileNotFoundException{
         String inodePath = getINodePath(userName, path);
         try{
-            updateDFSINode(inodePath, 2);
+            DFSINode.updateDFSINode(inode, inodePath, 2);
         }
         catch(FileAlreadyExistsException e){
             System.out.println("updateDFSInode function error!");
         }
     }
 
-    /**
-     * Clients RMI - ifExistsDFSDirectory
-     * @param path
-     * @return
-     * @throws RemoteException
-     * @throws FileNotFoundException
-     * @throws FileAlreadyExistsException
-     */
     @Override
-    public boolean ifExistsDFSINode(String userName, String path) throws RemoteException{
+    public boolean ifExistsDFSINode(String userName, String path) throws RemoteException, UserNotFoundException{
         boolean res = false;
         try{
             String inodePath = getINodePath(userName, path);
-            res = (updateDFSINode(inodePath, 0) != null);
+            res = (DFSINode.updateDFSINode(inode, inodePath, 0) != null);
         }
         catch (FileNotFoundException e){
             return false;
@@ -670,17 +565,10 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         return res;
     }
 
-//    private boolean checkLogin(String userID, String userName){
-//        return users.get(userName).userID.contains(userID);
-//    }
-
-    /**
-     * @param userName
-     * @param dfspath
-     * @return
-     * @throws FileNotFoundException
-     */
-    private String getINodePath(String userName, String dfspath) throws FileNotFoundException{
+    private String getINodePath(String userName, String dfspath) throws FileNotFoundException, UserNotFoundException{
+        if(dfsUsers.containsKey(userName)){
+            throw new UserNotFoundException();
+        }
         String res = new String("");
         res += userName;
         res += '\\';
@@ -694,96 +582,5 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
             res = res.substring(0, res.length()-1);
         }
         return res;
-    }
-    /**
-     * Inode 核心操作函数
-     * @param inodePath DFSINode节点绝对路径
-     * @param method
-     *        11: add new file
-     *        12: delete a file
-     *         1: add new dir
-     *         2: delete a dir
-     *         0: return the exists dir INode. If not exists, return null.
-     * @return method == 0 且存在该节点时返回对应DFSINode，其他情况返回null
-     */
-    public DFSINode updateDFSINode(String inodePath, int method) throws RemoteException, FileNotFoundException, FileAlreadyExistsException {
-        DFSINode tmp = inode;
-        // 将路径按"\"符分隔出各级目录来
-        String[] splits = inodePath.split("\\\\");   // 分隔符"\"
-        int length = splits.length-1;
-
-        for (int i = 0; i <= length; i ++){
-            String eachPath = splits[i];
-            // 当前路径是文件
-            if(tmp.childInode == null){
-                throw new FileAlreadyExistsException("");
-            }
-            // 当前目录存在名为eachPath的子文件/目录
-            // ！！！当前还没有判断对应的儿子INode节点是目录还是文件
-            else if(tmp.childInode.containsKey(eachPath)){
-                if(i == length){
-                    if(method == 11){
-                        throw new FileAlreadyExistsException("");
-                    }
-                    else if(method == 1){
-                        throw new FileAlreadyExistsException("");
-                    }
-                    else if(method == 12){
-                        DFSINode tmpChild = tmp.childInode.get(eachPath);
-                        if(tmpChild.childInode == null)
-                            tmp.childInode.remove(eachPath);
-                        else
-                            // It's a Directory!
-                            throw new FileNotFoundException();
-                    }
-                    else if(method == 2){
-                        DFSINode tmpChild = tmp.childInode.get(eachPath);
-                        if(tmpChild.childInode != null)
-                            tmp.childInode.remove(eachPath);
-                        else
-                            // It's a File!
-                            throw new FileNotFoundException();
-                    }
-                    else if(method == 0){
-                        return tmp.childInode.get(eachPath);
-                    }
-                }
-                else{
-                    // 继续往下遍历
-                    tmp = tmp.childInode.get(eachPath);
-                }
-            }
-            else{
-                if(i == length){
-                    if(method == 11){
-                        DFSINode newInode = DFSINode.getInstance(eachPath, false);
-                        tmp.childInode.put(eachPath, newInode);
-                    }
-                    else if(method == 1){
-                        DFSINode newInode = DFSINode.getInstance(eachPath, true);
-                        tmp.childInode.put(eachPath, newInode);
-                    }
-                    else if(method == 2 || method == 12){
-                        throw new FileNotFoundException();
-                    }
-                    else if(method == 0){
-                        return null;
-                    }
-                }
-                else{
-                    if(method == 1){
-                        // 新建目录
-                        DFSINode newInode = DFSINode.getInstance(eachPath, true);
-                        tmp.childInode.put(eachPath, newInode);
-                        // 继续沿着新建目录往下遍历
-                        tmp = newInode;
-                    }
-                    else{
-                        throw new FileNotFoundException();
-                    }
-                }
-            }
-        }
-        return null;
     }
 }

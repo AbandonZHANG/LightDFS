@@ -1,6 +1,8 @@
 package com.zzp.simpledfs.client;
 
 import com.zzp.simpledfs.common.DFSINode;
+import com.zzp.simpledfs.common.NoEnoughSpaceException;
+import com.zzp.simpledfs.common.UserNotFoundException;
 
 import java.io.FileNotFoundException;
 import java.nio.file.FileAlreadyExistsException;
@@ -203,6 +205,9 @@ public class DFSClientConsole {
         catch (RemoteException e){
             System.out.println("[LINK-ERROR!] Can't link to the NameNode!");
         }
+        catch (UserNotFoundException e){
+            System.out.println("[ERROR!] User not found!");
+        }
     }
     public void mkdir(String dfsPath){
         try{
@@ -217,6 +222,9 @@ public class DFSClientConsole {
         catch (FileNotFoundException e){
             System.out.println("[ERROR!] Illegal Path!");
         }
+        catch (UserNotFoundException e){
+            System.out.println("[ERROR!] User not found!");
+        }
     }
     public void rmdir(String dfsPath){
         try{
@@ -228,6 +236,9 @@ public class DFSClientConsole {
         catch (FileNotFoundException e){
             System.out.println("[ERROR!] File not found!");
         }
+        catch (UserNotFoundException e){
+            System.out.println("[ERROR!] User not found!");
+        }
     }
     public void uploadFile(String localFilePath, String dfsFilePath){
         try{
@@ -238,6 +249,12 @@ public class DFSClientConsole {
         }
         catch (NotBoundException e){
             System.out.println("[LINK-ERROR!] Can't link to the DataNode!");
+        }
+        catch (UserNotFoundException e){
+            System.out.println("[ERROR!] User not found!");
+        }
+        catch (NoEnoughSpaceException e){
+            System.out.println("[ERROR!] User space is not enough!");
         }
         catch (FileNotFoundException e){
             System.out.println("[ERROR!] Illegal Path!");
@@ -255,6 +272,9 @@ public class DFSClientConsole {
         }
         catch (NotBoundException e){
             System.out.println("[LINK-ERROR!] Can't link to the DataNode!");
+        }
+        catch (UserNotFoundException e){
+            System.out.println("[ERROR!] User not found!");
         }
         catch (FileNotFoundException e){
             System.out.println("[ERROR!] File not found!");

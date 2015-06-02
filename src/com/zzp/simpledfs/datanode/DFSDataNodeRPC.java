@@ -1,4 +1,8 @@
-package main.java.com.zzp.simpledfs;
+package com.zzp.simpledfs.datanode;
+
+import com.zzp.simpledfs.common.DFSDataNodeState;
+import com.zzp.simpledfs.common.ClientDataNodeRPCInterface;
+import com.zzp.simpledfs.common.DataNodeNameNodeRPCInterface;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -126,13 +130,13 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
     }
     public DFSDataNodeState getCurrentState(){
         DFSDataNodeState myState = new DFSDataNodeState();
-        myState.datanodeID = datanodeID;
-        myState.ip = datanodeIp;
-        myState.port = datanodePort;
         File workDir = new File(System.getProperty("user.dir"));
-        myState.totalSpace = workDir.getTotalSpace();
-        myState.freeSpace = workDir.getFreeSpace();
-        myState.usedSpace = workDir.getUsableSpace();
+        myState.setDatanodeID(datanodeID);
+        myState.setIp(datanodeIp);
+        myState.setPort(datanodePort);
+        myState.setTotalSpace(workDir.getTotalSpace());
+        myState.setFreeSpace(workDir.getFreeSpace());
+        myState.setUsedSpace(workDir.getUsableSpace());
         return myState;
     }
     /**

@@ -1,6 +1,4 @@
-package main.java.com.zzp.simpledfs;
-
-import java.util.Scanner;
+package com.zzp.simpledfs.datanode;
 
 public class DFSDataNode {
     DFSDataNodeRPC dataNodeRPC;

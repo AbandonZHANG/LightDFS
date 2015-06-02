@@ -1,13 +1,10 @@
-package main.java.com.zzp.simpledfs;
+package com.zzp.simpledfs.namenode;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.TreeMap;
-import java.util.UUID;
+import java.util.*;
 
 public class DFSConsistentHashing {
     static private long unitSpace = 64*1024*1024;  // 每unitSpace MB硬盘空间一个虚拟节点, 默认64MB
-    public static void setUnitSpace(int unitSpace) {
+    public static void setUnitSpace(long unitSpace) {
         DFSConsistentHashing.unitSpace = unitSpace;
     }
 
@@ -82,7 +79,8 @@ public class DFSConsistentHashing {
             // 求出每个key的hashcode，加入circle域中
             chCircle.remove(DFSHashFunction.hash(theNode.nodeKeys.get(i)));
         }
-        // 数据迁移
+        // ！！！数据迁移
+
     }
     public String getNode(String key){
         Integer hashcode = DFSHashFunction.hash(key);
@@ -90,9 +88,17 @@ public class DFSConsistentHashing {
             return chCircle.get(hashcode);
         }
         else{
-            String node = chCircle.higherEntry(hashcode).getValue();
-            if(node == null){
-                node = chCircle.firstEntry().getValue();
+            String node = null;
+            Map.Entry entry = chCircle.higherEntry(hashcode);
+            if(entry == null){
+                entry = chCircle.firstEntry();
+                if(entry == null)
+                    return null;
+                else
+                    node = (String)entry.getValue();
+            }
+            else{
+                node = (String)entry.getValue();
             }
             return node;
         }

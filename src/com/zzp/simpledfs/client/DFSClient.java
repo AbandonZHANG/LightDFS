@@ -1,4 +1,8 @@
-package main.java.com.zzp.simpledfs;
+package com.zzp.simpledfs.client;
+
+import com.zzp.simpledfs.common.ClientDataNodeRPCInterface;
+import com.zzp.simpledfs.common.ClientNameNodeRPCInterface;
+import com.zzp.simpledfs.common.DFSINode;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -9,28 +13,27 @@ import java.rmi.RemoteException;
 import java.util.*;
 
 public class DFSClient {
+    public static DFSClient getInstance() throws RemoteException{
+        return new DFSClient();
+    }
     private ClientNameNodeRPCInterface clientRmi;
-    //private String nodeID;      // 设备唯一识别码UUID，用于服务端验证登陆
     private String loginUserName;    // 当前登陆用户名
     private String namenodeIp, namenodePort;  // 连接的NameNode ip, port
     private int blockSize;
-    DFSClient(){
+    DFSClient() throws RemoteException{
         // 读取配置文件client.xml
         readConfigFile("client.xml");
 
-        // 生成、读取设备唯一识别码UUID
-        // getNodeID();
-
-        try {
+        try{
             clientRmi = (ClientNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
-            //clientRmi = (ClientNameNodeRmiInterface) Naming.lookup("rmi://"+namenodeIp+":"+namenodePort+"/DFSNameNode");
         }
-        catch (Exception e){
-            e.printStackTrace();
-            System.exit(0);
-        }
+        catch (NotBoundException e){
 
-        //login(userName, password);
+        }
+        catch (MalformedURLException a){
+
+        }
+        //clientRmi = (ClientNameNodeRmiInterface) Naming.lookup("rmi://"+namenodeIp+":"+namenodePort+"/DFSNameNode");
     }
     private void readConfigFile(String file){
         Properties props = new Properties();
@@ -47,26 +50,6 @@ public class DFSClient {
             e.printStackTrace();
         }
     }
-
-//    private String getNodeID(){
-//        File ipFile = new File("device");
-//        String res = null;
-//        try {
-//            if(ipFile.exists()){
-//                Scanner in = new Scanner(new FileInputStream(ipFile));
-//                res = in.next();
-//            }
-//            else{
-//                ipFile.createNewFile();
-//                res = UUID.randomUUID().toString();
-//                BufferedWriter bufWriter = new BufferedWriter(new FileWriter(ipFile));
-//                bufWriter.write(res);
-//            }
-//        }
-//        catch (IOException e){
-//        }
-//        return res;
-//    }
 
     public static boolean registerUser(String userName, String password) throws RemoteException{
         boolean res = false;
@@ -102,15 +85,43 @@ public class DFSClient {
         loginUserName = null;
     }
 
+    public long getUserTotalSpace() throws RemoteException{
+        if(loginUserName == null)
+            return -1;
+        else
+            return clientRmi.getUserTotalSpace(loginUserName);
+    }
+    public long getUserUsedSpace() throws RemoteException{
+        if(loginUserName == null)
+            return -1;
+        else
+            return clientRmi.getUserUsedSpace(loginUserName);
+    }
+    public boolean setUserTotalSpace(long totalSpace) throws RemoteException{
+        if(loginUserName == null)
+            return false;
+        else
+            return clientRmi.setUserTotalSpace(loginUserName, totalSpace);
+    }
     /**
      * @param dfsPath DFS目录绝对路径
      */
-    public void mkdir(String dfsPath) throws RemoteException, FileAlreadyExistsException, FileNotFoundException{
-        clientRmi.addDFSDirectory(loginUserName, dfsPath);
+    public boolean mkdir(String dfsPath) throws RemoteException, FileAlreadyExistsException, FileNotFoundException{
+        if(loginUserName == null)
+            return false;
+        else{
+            clientRmi.addDFSDirectory(loginUserName, dfsPath);
+            return true;
+        }
     }
 
-    public void rmdir(String dfsPath) throws RemoteException, FileNotFoundException{
-        clientRmi.delDFSDirectory(loginUserName, dfsPath);
+    public boolean rmdir(String dfsPath) throws RemoteException, FileNotFoundException{
+        if(loginUserName == null)
+            return false;
+        else {
+            clientRmi.delDFSDirectory(loginUserName, dfsPath);
+            return true;
+        }
     }
 
     /**
@@ -119,11 +130,15 @@ public class DFSClient {
      */
     public boolean checkdir(String dfsPath) throws RemoteException{
         boolean res = false;
+        if(loginUserName == null)
+            return false;
         res = clientRmi.ifExistsDFSINode(loginUserName, dfsPath);
         return res;
     }
 
     public DFSINode getINode(String dfsPath) throws RemoteException, FileNotFoundException{
+        if(loginUserName == null)
+            return null;
         return clientRmi.getDFSINode(loginUserName, dfsPath);
     }
 
@@ -131,21 +146,27 @@ public class DFSClient {
      * @param originPath 原DFS目录绝对路径
      * @param newPath 新DFS目录绝对路径
      */
-    public void renameFile(String originPath, String newPath) throws FileNotFoundException, FileAlreadyExistsException, RemoteException{
+    public boolean renameFile(String originPath, String newPath) throws FileNotFoundException, FileAlreadyExistsException, RemoteException{
+        if(loginUserName == null)
+            return false;
         clientRmi.renameDFSFile(loginUserName, originPath, newPath);
+        return true;
     }
 
     /**
      * @param localFilePath 本地文件绝对路径或者相对路径
      * @param dfsPath DFS目录绝对路径
      */
-    public void uploadFile(String localFilePath, String dfsPath) throws RemoteException, FileAlreadyExistsException, FileNotFoundException {
+    public boolean uploadFile(String localFilePath, String dfsPath) throws RemoteException, NotBoundException, FileAlreadyExistsException, FileNotFoundException {
+        if(loginUserName == null)
+            return false;
         try{
+            File localFile = new File(localFilePath);
             // 读取本地文件返回字节流
-            ArrayList<byte[]> byteblocks = transToByte(new File(localFilePath));
+            ArrayList<byte[]> byteblocks = transToByte(localFile);
             // 向NameNode发送请求，新建Inode文件节点，分配数据块标识，分配数据节点
             // 返回数据块标识和存储数据节点
-            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.newDFSFileMapping(loginUserName, dfsPath, byteblocks.size());
+            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.newDFSFileMapping(loginUserName, dfsPath, localFile.length(), byteblocks.size());
             if(blockDatanodes == null){
                 throw new FileNotFoundException();
             }
@@ -162,16 +183,16 @@ public class DFSClient {
         catch (MalformedURLException e){
             e.printStackTrace();
         }
-        catch (NotBoundException e){
-            e.printStackTrace();
-        }
+        return true;
     }
 
     /**
      * @param dfsPath DFS目录绝对路径
      * @param localPath 本地绝对路径或者相对路径
      */
-    public void downloadFile(String dfsPath, String localPath) throws RemoteException, FileNotFoundException{
+    public boolean downloadFile(String dfsPath, String localPath) throws RemoteException, NotBoundException, FileNotFoundException{
+        if(loginUserName == null)
+            return false;
         // 向NameNode询问某文件的数据块标识及数据节点
         // 返回数据块标识和存储数据节点
         ArrayList<Map.Entry<String, String>> blockDatanodes = clientRmi.lookupFileBlocks(loginUserName, dfsPath);
@@ -182,11 +203,10 @@ public class DFSClient {
             String block = blockDatanode.getKey();
             //String datanodeip = blockDatanode.getValue();
             ClientDataNodeRPCInterface transRmi = null;
+
+            // !!!避免lookup重复查询
             try{
                 transRmi = (ClientDataNodeRPCInterface) Naming.lookup("rmi://localhost:2021/DFSDataNode");
-            }
-            catch (NotBoundException e){
-                e.printStackTrace();
             }
             catch (MalformedURLException e){
                 e.printStackTrace();
@@ -199,6 +219,7 @@ public class DFSClient {
             catch (IOException e){
                 e.printStackTrace();
             }
+            return true;
         }
         try{
             bufOut.close();
@@ -206,6 +227,7 @@ public class DFSClient {
         catch (IOException e){
             e.printStackTrace();
         }
+        return false;
     }
 
     /**

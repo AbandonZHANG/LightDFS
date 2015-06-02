@@ -1,4 +1,9 @@
-package main.java.com.zzp.simpledfs;
+package com.zzp.simpledfs.namenode;
+
+import com.zzp.simpledfs.common.ClientNameNodeRPCInterface;
+import com.zzp.simpledfs.common.DFSDataNodeState;
+import com.zzp.simpledfs.common.DFSINode;
+import com.zzp.simpledfs.common.DataNodeNameNodeRPCInterface;
 
 import java.io.*;
 import java.nio.file.FileAlreadyExistsException;
@@ -55,7 +60,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         File usersFile = new File("users");
         if(!inodeFile.exists()){
             // 初始化DFS INode根目录
-            inode = new DFSINode("root", true);
+            inode = DFSINode.getInstance("root", true);
         }
         else{
             try {
@@ -258,9 +263,9 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
     @Override
     public void sendDataNodeStates(DFSDataNodeState datanode) throws RemoteException{
         // 节点状态监控
-        if(checkNodeConnection(datanode.datanodeID) == 2){
+        if(checkNodeConnection(datanode.getDatanodeID()) == 2){
             // 更新一致性哈希
-            consistentHash.updateNode(datanode.datanodeID, datanode.freeSpace);
+            consistentHash.updateNode(datanode.getDatanodeID(), datanode.getFreeSpace());
         }
     }
 
@@ -288,12 +293,12 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
      */
     @Override
     public boolean registerDataNode(DFSDataNodeState datanode) throws RemoteException{
-        if(checkNodeConnection(datanode.datanodeID) == 1){
+        if(checkNodeConnection(datanode.getDatanodeID()) == 1){
             // 标记服务器已连接
-            excludeNodes.remove(datanode.datanodeID);
-            datanodeStates.put(datanode.datanodeID, datanode);
+            excludeNodes.remove(datanode.getDatanodeID());
+            datanodeStates.put(datanode.getDatanodeID(), datanode);
             // 注册一致性哈希
-            consistentHash.addNode(datanode.datanodeID, datanode.freeSpace);
+            consistentHash.addNode(datanode.getDatanodeID(), datanode.getFreeSpace());
             return true;
         }
         else{
@@ -345,7 +350,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         // 新建DFSUser类，加入到用户列表中
         dfsUsers.put(userName, new DFSUser(userName, password));
         // 分配INode的User目录
-        DFSINode userINode = new DFSINode(userName, true);
+        DFSINode userINode = DFSINode.getInstance(userName, true);
         inode.childInode.put(userName, userINode);
         return true;
     }
@@ -398,21 +403,39 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
             return false;
         }
     }
-//    public boolean logout(String userID, String userName) throws RemoteException{
-//        if(users.containsKey(userName)){
-//            DFSUser theUser = users.get(userName);
-//            if (theUser.userID.contains(userID)){
-//                theUser.userID.remove(userID);
-//                return true;
-//            }
-//            else{
-//                return false;
-//            }
-//        }
-//        else{
-//            return false;
-//        }
-//    }
+
+    /**
+     * @param userName
+     * @return
+     * @throws RemoteException
+     */
+    public long getUserTotalSpace(String userName) throws RemoteException{
+        if(dfsUsers.containsKey(userName)){
+            return dfsUsers.get(userName).maxSpace;
+        }
+        else{
+            return -1;
+        }
+    }
+
+    public long getUserUsedSpace(String userName) throws RemoteException{
+        if(dfsUsers.containsKey(userName)){
+            return dfsUsers.get(userName).usedSpace;
+        }
+        else{
+            return -1;
+        }
+    }
+
+    public boolean setUserTotalSpace(String userName, long totalSpace) throws RemoteException{
+        if(dfsUsers.containsKey(userName)){
+            dfsUsers.get(userName).maxSpace = totalSpace;
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
 
     /**
      * Clients RMI - getDFSINode
@@ -439,7 +462,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
     /**
      * Clients RMI - newDFSFileMapping
      * @param filePath
-     * @param blocks_num
+     * @param blockNum
      * @return
      *
      * @throws RemoteException
@@ -447,7 +470,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
      * @throws FileAlreadyExistsException
      */
     @Override
-    public ArrayList< Map.Entry<String, String> > newDFSFileMapping(String userName, String filePath, int blocks_num) throws RemoteException, FileNotFoundException, FileAlreadyExistsException {
+    public ArrayList< Map.Entry<String, String> > newDFSFileMapping(String userName, String filePath, long fileSize, int blockNum) throws RemoteException, FileNotFoundException, FileAlreadyExistsException {
         ArrayList< Map.Entry<String, String> > blockDatanodes = new ArrayList<Map.Entry<String, String>>();
         String inodePath = getINodePath(userName, filePath);
         // 新建File-Block Mapping节点
@@ -457,7 +480,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
         newFileBlockMapping.blocks = new ArrayList<String>();
 
         // 生成block标识
-        for (int i = 0; i < blocks_num; ++i) {
+        for (int i = 0; i < blockNum; ++i) {
             UUID newUUID = UUID.randomUUID();
             // 加入到file的block列表中
             newFileBlockMapping.blocks.add(newUUID.toString());
@@ -469,7 +492,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
             }
             DFSDataNodeState dataNodeState = datanodeStates.get(datanodeID);
 
-            blockDatanodes.add(new AbstractMap.SimpleEntry<String, String>(newUUID.toString(), dataNodeState.ip));
+            blockDatanodes.add(new AbstractMap.SimpleEntry<String, String>(newUUID.toString(), dataNodeState.getIp()));
             // 添加Block-DataNode映射
             blockDataNodeMappings.put(newUUID.toString(), datanodeID);
         }
@@ -501,7 +524,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
                 // 在数据块-数据节点映射中查询数据块所属数据节点标识
                 String datanode = blockDataNodeMappings.get(block);
                 // 获取当前该数据节点的ip
-                String datanodeip = datanodeStates.get(datanode).ip;
+                String datanodeip = datanodeStates.get(datanode).getIp();
                 blockDatanodes.add(new AbstractMap.SimpleEntry<String, String>(block, datanodeip));
             }
         }
@@ -538,7 +561,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
                 // 在数据块-数据节点映射中查询数据块所属数据节点标识
                 String datanode = blockDataNodeMappings.get(block);
                 // 获取当前该数据节点的ip
-                String datanodeip = datanodeStates.get(datanode).ip;
+                String datanodeip = datanodeStates.get(datanode).getIp();
                 blockDatanodes.add(new AbstractMap.SimpleEntry<String, String>(block, datanodeip));
             }
         }
@@ -733,11 +756,11 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
             else{
                 if(i == length){
                     if(method == 11){
-                        DFSINode newInode = new DFSINode(eachPath, false);
+                        DFSINode newInode = DFSINode.getInstance(eachPath, false);
                         tmp.childInode.put(eachPath, newInode);
                     }
                     else if(method == 1){
-                        DFSINode newInode = new DFSINode(eachPath, true);
+                        DFSINode newInode = DFSINode.getInstance(eachPath, true);
                         tmp.childInode.put(eachPath, newInode);
                     }
                     else if(method == 2 || method == 12){
@@ -750,7 +773,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
                 else{
                     if(method == 1){
                         // 新建目录
-                        DFSINode newInode = new DFSINode(eachPath, true);
+                        DFSINode newInode = DFSINode.getInstance(eachPath, true);
                         tmp.childInode.put(eachPath, newInode);
                         // 继续沿着新建目录往下遍历
                         tmp = newInode;

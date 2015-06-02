@@ -1,4 +1,6 @@
-package main.java.com.zzp.simpledfs;
+package com.zzp.simpledfs.datanode;
+
+import com.zzp.simpledfs.common.DataNodeNameNodeRPCInterface;
 
 import java.rmi.Naming;
 

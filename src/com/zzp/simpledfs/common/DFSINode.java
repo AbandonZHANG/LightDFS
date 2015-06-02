@@ -1,13 +1,15 @@
-package main.java.com.zzp.simpledfs;
+package com.zzp.simpledfs.common;
 
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Iterator;
 
 public class DFSINode implements Serializable {
-    String name;    // 文件or目录名称
-    HashMap<String, DFSINode> childInode;   // childInode == null 表示该节点是文件, childInode != null 表示该节点是目录
-    //DFSINode(){}
+    public static DFSINode getInstance(String name, boolean ifDir){
+        return new DFSINode(name, ifDir);
+    }
+    public String name;    // 文件or目录名称
+    public HashMap<String, DFSINode> childInode;   // childInode == null 表示该节点是文件, childInode != null 表示该节点是目录
     DFSINode(String _name, boolean ifDir){
         name = _name;
         if(ifDir)

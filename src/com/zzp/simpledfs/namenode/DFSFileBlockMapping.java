@@ -1,4 +1,4 @@
-package main.java.com.zzp.simpledfs;
+package com.zzp.simpledfs.namenode;
 
 import java.io.Serializable;
 import java.util.ArrayList;

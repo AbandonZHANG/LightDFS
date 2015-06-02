@@ -1,4 +1,4 @@
-package main.java.com.zzp.simpledfs;
+package com.zzp.simpledfs.common;
 
 import java.io.FileNotFoundException;
 import java.rmi.Remote;

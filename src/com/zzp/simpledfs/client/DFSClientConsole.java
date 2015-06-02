@@ -1,17 +1,27 @@
-package main.java.com.zzp.simpledfs;
+package com.zzp.simpledfs.client;
+
+import com.zzp.simpledfs.common.DFSINode;
 
 import java.io.FileNotFoundException;
 import java.nio.file.FileAlreadyExistsException;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.*;
 
 public class DFSClientConsole {
-    DFSClient dfsClient = new DFSClient();
+    DFSClient dfsClient;
     String loginUserName = new String();
     final Stack<String> dir = new Stack<String>();  // 当前client所在DFS目录，初始为根目录用户名
 
     public static void main(String[] args){
         DFSClientConsole client = new DFSClientConsole();
+        try{
+            client.dfsClient = DFSClient.getInstance();
+        }
+        catch (RemoteException e){
+            System.out.println("[LINK-ERROR!] Can't link to the NameNode!");
+            return;
+        }
         client.printHello();
         client.userLogin();
         client.readUserCommand();
@@ -178,7 +188,7 @@ public class DFSClientConsole {
             }
         }
         catch (RemoteException e){
-            System.out.println("[ERROR!] No consistent password!");
+            System.out.println("[LINK-ERROR!] Can't link to the NameNode!");
         }
     }
     public void listDirectory(){
@@ -226,6 +236,9 @@ public class DFSClientConsole {
         catch (RemoteException e){
             System.out.println("[LINK-ERROR!] Can't link to the NameNode!");
         }
+        catch (NotBoundException e){
+            System.out.println("[LINK-ERROR!] Can't link to the DataNode!");
+        }
         catch (FileNotFoundException e){
             System.out.println("[ERROR!] Illegal Path!");
         }
@@ -239,6 +252,9 @@ public class DFSClientConsole {
         }
         catch (RemoteException e){
             System.out.println("[LINK-ERROR!] Can't link to the NameNode!");
+        }
+        catch (NotBoundException e){
+            System.out.println("[LINK-ERROR!] Can't link to the DataNode!");
         }
         catch (FileNotFoundException e){
             System.out.println("[ERROR!] File not found!");

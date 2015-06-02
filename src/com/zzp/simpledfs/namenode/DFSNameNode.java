@@ -1,4 +1,6 @@
-package main.java.com.zzp.simpledfs;
+package com.zzp.simpledfs.namenode;
+
+import com.zzp.simpledfs.common.DFSINode;
 
 import java.util.Scanner;
 

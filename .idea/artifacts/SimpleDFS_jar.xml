@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="SimpleDFS:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/SimpleDFS_jar</output-path>
+    <root id="archive" name="SimpleDFS.jar">
+      <element id="module-output" name="SimpleDFS" />
+    </root>
+  </artifact>
+</component>

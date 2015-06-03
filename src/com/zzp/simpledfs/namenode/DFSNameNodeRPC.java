@@ -483,6 +483,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
             // 获取所有数据块对应的数据节点
             for (String block:fileBlocks.blocks){
                 String datanode = blockDataNodeMappings.get(block);
+                blockDataNodeMappings.remove(block);
                 String datanodeip = datanodeStates.get(datanode).getIp();
                 blockDatanodes.add(new AbstractMap.SimpleEntry<>(block, datanodeip));
             }
@@ -566,7 +567,7 @@ public class DFSNameNodeRPC extends UnicastRemoteObject implements DataNodeNameN
     }
 
     private String getINodePath(String userName, String dfspath) throws FileNotFoundException, UserNotFoundException{
-        if(dfsUsers.containsKey(userName)){
+        if(!dfsUsers.containsKey(userName)){
             throw new UserNotFoundException();
         }
         String res = new String("");

@@ -262,7 +262,6 @@ public class DFSDataNodeRPC extends UnicastRemoteObject implements ClientDataNod
     @Override
     public void deleteBlock(String blockName)throws RemoteException, FileNotFoundException{
         File rFile = new File(absoluteBlockDirectory+"\\"+blockName);
-        byte[] res = null;
         if(!rFile.exists()){
             throw new FileNotFoundException("Block not found!");
         }

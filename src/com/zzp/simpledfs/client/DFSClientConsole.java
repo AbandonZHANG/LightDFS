@@ -137,6 +137,14 @@ public class DFSClientConsole {
                 downloadFile(getAbsolutelyDFSLocalPath(cmdArray[1]), cmdArray[2]);
             }
         }
+        else if(cmdArray[0].equals("remove")){
+            if(cmdArray.length != 2){
+                System.out.println("Wrong command format!");
+            }
+            else{
+                removeFile(getAbsolutelyDFSLocalPath(cmdArray[1]));
+            }
+        }
         else if(cmdArray[0].equals("renamefile")){
             if(cmdArray.length != 3){
                 System.out.println("Wrong command format!");
@@ -238,6 +246,23 @@ public class DFSClientConsole {
         }
         catch (UserNotFoundException e){
             System.out.println("[ERROR!] User not found!");
+        }
+    }
+    public void removeFile(String dfsFilePath){
+        try{
+            dfsClient.removeFile(dfsFilePath);
+        }
+        catch (RemoteException e){
+            System.out.println("[LINK-ERROR!] Can't link to the NameNode!");
+        }
+        catch (NotBoundException e){
+            System.out.println("[LINK-ERROR!] Can't link to the DataNode!");
+        }
+        catch (UserNotFoundException e){
+            System.out.println("[ERROR!] User not found!");
+        }
+        catch (FileNotFoundException e){
+            System.out.println("[ERROR!] Illegal DFS Path!");
         }
     }
     public void uploadFile(String localFilePath, String dfsFilePath){

@@ -1,3 +1,3 @@
 set CLASSPATH=out\production\SimpleDFS\
-java DFSClientConsole
+java com.zzp.simpledfs.client.DFSClientConsole
 pause

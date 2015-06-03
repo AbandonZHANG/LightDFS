@@ -1,3 +1,3 @@
 set CLASSPATH=out\production\SimpleDFS\
-java DFSDataNode
+java com.zzp.simpledfs.datanode.DFSDataNode
 pause

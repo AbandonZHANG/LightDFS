@@ -23,7 +23,7 @@ public class DFSClient {
         readConfigFile("client.xml");
 
         try{
-            clientRmi = (ClientNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");
+            clientRmi = (ClientNameNodeRPCInterface) Naming.lookup("rmi://"+namenodeIp+":"+namenodePort+"/DFSNameNodeConsole");
         }
         catch (NotBoundException e){
 
@@ -31,7 +31,6 @@ public class DFSClient {
         catch (MalformedURLException a){
 
         }
-        //clientRmi = (ClientNameNodeRmiInterface) Naming.lookup("rmi://"+namenodeIp+":"+namenodePort+"/DFSNameNode");
     }
     private void readConfigFile(String file){
         Properties props = new Properties();
@@ -49,10 +48,9 @@ public class DFSClient {
         }
     }
 
-    public static boolean registerUser(String userName, String password) throws RemoteException{
+    public boolean registerUser(String userName, String password) throws RemoteException{
         boolean res = false;
         try{
-            ClientNameNodeRPCInterface clientRmi = (ClientNameNodeRPCInterface) Naming.lookup("rmi://localhost:2020/DFSNameNode");;
             res = clientRmi.registerUser(userName, DFSBase64.Base64Encode(password));
         }
         catch (RemoteException e){
@@ -164,16 +162,15 @@ public class DFSClient {
             ArrayList<byte[]> byteblocks = transToByte(localFile);
             // 向NameNode发送请求，新建Inode文件节点，分配数据块标识，分配数据节点
             // 返回数据块标识和存储数据节点
-            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.newDFSFileMapping(loginUserName, dfsPath, localFile.length(), byteblocks.size());
+            ArrayList<Map.Entry<String, DFSDataNodeRPCAddress> > blockDatanodes =  clientRmi.newDFSFileMapping(loginUserName, dfsPath, localFile.length(), byteblocks.size());
             if(blockDatanodes == null){
                 throw new FileNotFoundException();
             }
             int i = 0;
-            for(Map.Entry<String, String> eachTrans:blockDatanodes){
+            for(Map.Entry<String, DFSDataNodeRPCAddress> eachTrans:blockDatanodes){
                 String block = eachTrans.getKey();
-                //String datanodeip = eachTrans.getValue();
-                ClientDataNodeRPCInterface transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://localhost:2021/DFSDataNode");
-                //ClientDataNodeRmiInterface transRmi = (ClientDataNodeRmiInterface)Naming.lookup("rmi://"+datanodeip+":2021/DFSDataNode");
+                DFSDataNodeRPCAddress datanodeAddr = eachTrans.getValue();
+                ClientDataNodeRPCInterface transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://"+datanodeAddr.getIp()+":"+datanodeAddr.getPort()+"/DFSDataNodeConsole");
                 transRmi.uploadBlock(byteblocks.get(i), block);
                 i ++;
             }
@@ -193,23 +190,22 @@ public class DFSClient {
             throw new UserNotFoundException();
         // 向NameNode询问某文件的数据块标识及数据节点
         // 返回数据块标识和存储数据节点
-        ArrayList<Map.Entry<String, String>> blockDatanodes = clientRmi.lookupFileBlocks(loginUserName, dfsPath);
+        ArrayList<Map.Entry<String, DFSDataNodeRPCAddress> > blockDatanodes = clientRmi.lookupFileBlocks(loginUserName, dfsPath);
         File wfile = new File(localPath);
         BufferedOutputStream bufOut = new BufferedOutputStream(new FileOutputStream(wfile));
 
-        for (Map.Entry<String, String> blockDatanode : blockDatanodes) {
+        for (Map.Entry<String, DFSDataNodeRPCAddress> blockDatanode : blockDatanodes) {
             String block = blockDatanode.getKey();
-            //String datanodeip = blockDatanode.getValue();
+            DFSDataNodeRPCAddress datanodeAddr = blockDatanode.getValue();
             ClientDataNodeRPCInterface transRmi = null;
 
             // !!!避免lookup重复查询
             try{
-                transRmi = (ClientDataNodeRPCInterface) Naming.lookup("rmi://localhost:2021/DFSDataNode");
+                transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://"+datanodeAddr.getIp()+":"+datanodeAddr.getPort()+"/DFSDataNodeConsole");
             }
             catch (MalformedURLException e){
                 e.printStackTrace();
             }
-            //ClientDataNodeRmiInterface transRmi = (ClientDataNodeRmiInterface)Naming.lookup("rmi://"+datanodeip+":2021/DFSDataNode");
             byte[] content = transRmi.downloadBlock(block);
             try{
                 bufOut.write(content);
@@ -231,13 +227,12 @@ public class DFSClient {
         try{
             // 向NameNode询问某文件的数据块标识及数据节点
             // 返回数据块标识和存储数据节点，删除主控节点上的元数据
-            ArrayList<Map.Entry<String, String> > blockDatanodes =  clientRmi.removeDFSFile(loginUserName, dfsPath);
+            ArrayList<Map.Entry<String, DFSDataNodeRPCAddress> > blockDatanodes =  clientRmi.removeDFSFile(loginUserName, dfsPath);
             // 删除数据节点上的数据块
-            for (Map.Entry<String, String> blockDatanode:blockDatanodes){
+            for (Map.Entry<String, DFSDataNodeRPCAddress> blockDatanode:blockDatanodes){
                 String block = blockDatanode.getKey();
-                //String datanodeip = blockDatanode.getValue();
-                ClientDataNodeRPCInterface transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://localhost:2021/DFSDataNode");
-                //ClientDataNodeRmiInterface transRmi = (ClientDataNodeRmiInterface)Naming.lookup("rmi://"+datanodeip+":2021/DFSDataNode");
+                DFSDataNodeRPCAddress datanodeAddr = blockDatanode.getValue();
+                ClientDataNodeRPCInterface transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://"+datanodeAddr.getIp()+":"+datanodeAddr.getPort()+"/DFSDataNodeConsole");
                 transRmi.deleteBlock(block);
             }
         }

@@ -13,7 +13,7 @@ import java.util.*;
 public class DFSClientConsole {
     DFSClient dfsClient;
     String loginUserName = new String();
-    final Stack<String> dir = new Stack<String>();  // 当前client所在DFS目录，初始为根目录用户名
+    final Stack<String> dir = new Stack();  // 当前client所在DFS目录，初始为根目录用户名
 
     public static void main(String[] args){
         DFSClientConsole client = new DFSClientConsole();
@@ -185,7 +185,7 @@ public class DFSClientConsole {
 
         try {
             if(password.equals(rePassword)){
-                boolean res = DFSClient.registerUser(userName, password);
+                boolean res = dfsClient.registerUser(userName, password);
                 if(res){
                     System.out.println("[SUCCESS!] Register-Success!");
                 }

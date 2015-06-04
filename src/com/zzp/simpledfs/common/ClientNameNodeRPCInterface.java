@@ -35,16 +35,16 @@ public interface ClientNameNodeRPCInterface extends Remote {
     boolean
         ifExistsDFSINode(String userName, String path)
             throws RemoteException, UserNotFoundException;
-    ArrayList< Map.Entry<String, String> >
+    void
+    renameDFSFile(String userName, String filePath, String newFilePath)
+            throws RemoteException, UserNotFoundException, FileNotFoundException, FileAlreadyExistsException;
+    ArrayList< Map.Entry<String, DFSDataNodeRPCAddress> >
         newDFSFileMapping(String userName, String filePath, long fileSize, int blockNum)
             throws RemoteException, UserNotFoundException, NoEnoughSpaceException, FileNotFoundException, FileAlreadyExistsException;
-    void
-        renameDFSFile(String userName, String filePath, String newFilePath)
-            throws RemoteException, UserNotFoundException, FileNotFoundException, FileAlreadyExistsException;
-    ArrayList< Map.Entry<String, String> >
+    ArrayList< Map.Entry<String, DFSDataNodeRPCAddress> >
         removeDFSFile(String userName, String filePath)
             throws RemoteException, UserNotFoundException, FileNotFoundException;
-    ArrayList< Map.Entry<String, String> >
+    ArrayList< Map.Entry<String, DFSDataNodeRPCAddress> >
         lookupFileBlocks(String userName, String filePath)
             throws RemoteException, UserNotFoundException, FileNotFoundException;
     DFSINode

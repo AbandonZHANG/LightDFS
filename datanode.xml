@@ -2,25 +2,22 @@
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>  
     <comment>数据服务器配置文件</comment>
-    <!-- DataNode ip地址 -->
+    <!-- RPC服务ip地址 -->
 	<entry  
-        key="ip"></entry>
-	<!-- DataNode RMI 端口号 -->
+        key="ip">172.29.140.241</entry>
+	<!-- RPC服务端口号 -->
     <entry  
-        key="port">50002</entry>
-	<!-- 连接的 NameNode ip -->	
+        key="port">2021</entry>
+	<!-- 主控节点ip地址 -->	
     <entry  
-        key="namenodeip"></entry>
-	<!-- 连接的 NameNode RMI 端口号 -->	
+        key="namenodeip">172.29.140.241</entry>
+	<!-- 主控节点端口号 -->	
     <entry  
-        key="namenodeip"></entry>
+        key="namenodeport">2020</entry>
 	<!-- 数据块存储目录 -->
     <entry  
         key="blockdir">datablocks</entry>
 	<!-- 每隔几毫秒发送一次心跳 -->
     <entry  
         key="perseconds">60000</entry>
-	<!-- 连续几次没有连接上NameNode就退出心跳线程 -->
-    <entry  
-        key="errornumtoquitjump">3</entry>
 </properties>

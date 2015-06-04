@@ -5,20 +5,20 @@ import java.io.Serializable;
 import java.nio.file.FileAlreadyExistsException;
 import java.rmi.RemoteException;
 import java.util.HashMap;
-import java.util.Iterator;
 
 public class DFSINode implements Serializable {
     public static DFSINode getInstance(String name, boolean ifDir){
         return new DFSINode(name, ifDir);
     }
 
+    public static String splitStr = "/";
     public String name;    // 文件or目录名称
     public HashMap<String, DFSINode> childInode;   // childInode == null 表示该节点是文件, childInode != null 表示该节点是目录
 
     DFSINode(String _name, boolean ifDir){
         name = _name;
         if(ifDir)
-            childInode = new HashMap<String, DFSINode>();
+            childInode = new HashMap<>();
     }
 
     public static void listDirTree(DFSINode inode, int depth){
@@ -33,9 +33,7 @@ public class DFSINode implements Serializable {
         System.out.println(inode.name);
         if(inode.childInode == null)
             return;
-        Iterator iter = inode.childInode.keySet().iterator();
-        while(iter.hasNext()){
-            Object key = iter.next();
+        for(String key:inode.childInode.keySet()){
             DFSINode child = inode.childInode.get(key);
             listDirTree(child, depth+1);
         }
@@ -56,8 +54,15 @@ public class DFSINode implements Serializable {
      * @throws FileAlreadyExistsException
      */
     public static DFSINode updateDFSINode(DFSINode inode, String inodePath, int method) throws RemoteException, FileNotFoundException, FileAlreadyExistsException {
-        // 将路径按"\"符分隔出各级目录来
-        String[] splits = inodePath.split("\\\\");   // 分隔符"\"
+        // 将路径分隔出各级目录来
+        String[] splits;
+        if(splitStr.equals("\\")){
+            splits = inodePath.split("\\\\");
+        }
+        else{
+            splits = inodePath.split(splitStr);
+        }
+
         int length = splits.length-1;
 
         for (int i = 0; i <= length; i ++){

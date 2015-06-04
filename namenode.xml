@@ -2,9 +2,12 @@
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>  
     <comment>主控服务器配置文件</comment>
+	<!-- 操作系统,输入： windows / linux -->
+    <entry  
+        key="os">windows</entry>
 	<!-- RPC服务ip地址 -->
     <entry  
-        key="ip">172.29.140.241</entry>
+        key="ip">172.30.59.25</entry>
 	<!-- RPC服务端口号 -->
     <entry  
         key="port">2020</entry>

@@ -1,6 +1,8 @@
 package com.zzp.simpledfs.common;
 
-public class DFSDataNodeRPCAddress {
+import java.io.Serializable;
+
+public class DFSDataNodeRPCAddress implements Serializable{
     private String ip, port;
     public DFSDataNodeRPCAddress(){}
     public DFSDataNodeRPCAddress(String _ip, String _port){

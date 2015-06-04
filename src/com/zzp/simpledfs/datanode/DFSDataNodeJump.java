@@ -18,7 +18,7 @@ public class DFSDataNodeJump extends Thread{
     public void run() {
         while(true) {
             try {
-                DataNodeNameNodeRPCInterface datanodeRmi = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://"+namenodeIp+":"+namenodePort+"/DFSNameNodeConsole");
+                DataNodeNameNodeRPCInterface datanodeRmi = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://"+namenodeIp+":"+namenodePort+"/DFSNameNode");
                 datanodeRmi.sendDataNodeJump(datanodeName);
                 sleep(perSeconds);
             } catch (Exception e) {

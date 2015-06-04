@@ -17,19 +17,20 @@ public class DFSClient {
     private ClientNameNodeRPCInterface clientRmi;
     private String loginUserName;    // 当前登陆用户名
     private String namenodeIp, namenodePort;  // 连接的NameNode ip, port
+    private String splitStr = "/";
     private int blockSize;
     DFSClient() throws RemoteException{
         // 读取配置文件client.xml
         readConfigFile("client.xml");
 
         try{
-            clientRmi = (ClientNameNodeRPCInterface) Naming.lookup("rmi://"+namenodeIp+":"+namenodePort+"/DFSNameNodeConsole");
+            clientRmi = (ClientNameNodeRPCInterface) Naming.lookup("rmi://"+namenodeIp+":"+namenodePort+"/DFSNameNode");
         }
-        catch (NotBoundException e){
-
+        catch (RemoteException e){
+            throw e;
         }
-        catch (MalformedURLException a){
-
+        catch (Exception e){
+            e.printStackTrace();
         }
     }
     private void readConfigFile(String file){
@@ -38,6 +39,9 @@ public class DFSClient {
             InputStream fin = new FileInputStream(file);
             props.loadFromXML(fin);
             fin.close();
+            String os = props.getProperty("os");
+            if (os.equals("windows"))
+                splitStr = "\\";
             namenodeIp = props.getProperty("namenodeip");
             namenodePort = props.getProperty("namenodeport");
             blockSize = Integer.valueOf(props.getProperty("blocksize"));
@@ -62,11 +66,11 @@ public class DFSClient {
         return res;
     }
 
-    public boolean unRegisterUser(String userName, String password) throws RemoteException, UserNotFoundException{
-        boolean res;
-        res = clientRmi.unRegisterUser(userName, DFSBase64.Base64Encode(password));
-        return res;
-    }
+//    public boolean unRegisterUser(String userName, String password) throws RemoteException, UserNotFoundException{
+//        boolean res;
+//        res = clientRmi.unRegisterUser(userName, DFSBase64.Base64Encode(password));
+//        return res;
+//    }
 
     public boolean login(String userName, String password) throws RemoteException{
         boolean res;
@@ -170,7 +174,7 @@ public class DFSClient {
             for(Map.Entry<String, DFSDataNodeRPCAddress> eachTrans:blockDatanodes){
                 String block = eachTrans.getKey();
                 DFSDataNodeRPCAddress datanodeAddr = eachTrans.getValue();
-                ClientDataNodeRPCInterface transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://"+datanodeAddr.getIp()+":"+datanodeAddr.getPort()+"/DFSDataNodeConsole");
+                ClientDataNodeRPCInterface transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://"+datanodeAddr.getIp()+":"+datanodeAddr.getPort()+"/DFSDataNode");
                 transRmi.uploadBlock(byteblocks.get(i), block);
                 i ++;
             }
@@ -201,7 +205,7 @@ public class DFSClient {
 
             // !!!避免lookup重复查询
             try{
-                transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://"+datanodeAddr.getIp()+":"+datanodeAddr.getPort()+"/DFSDataNodeConsole");
+                transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://"+datanodeAddr.getIp()+":"+datanodeAddr.getPort()+"/DFSDataNode");
             }
             catch (MalformedURLException e){
                 e.printStackTrace();
@@ -232,7 +236,7 @@ public class DFSClient {
             for (Map.Entry<String, DFSDataNodeRPCAddress> blockDatanode:blockDatanodes){
                 String block = blockDatanode.getKey();
                 DFSDataNodeRPCAddress datanodeAddr = blockDatanode.getValue();
-                ClientDataNodeRPCInterface transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://"+datanodeAddr.getIp()+":"+datanodeAddr.getPort()+"/DFSDataNodeConsole");
+                ClientDataNodeRPCInterface transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://"+datanodeAddr.getIp()+":"+datanodeAddr.getPort()+"/DFSDataNode");
                 transRmi.deleteBlock(block);
             }
         }
@@ -246,7 +250,7 @@ public class DFSClient {
      * @return 返回切割后的byte数据块列表
      */
     private ArrayList<byte[]> transToByte(File localFile) throws FileNotFoundException{
-        ArrayList<byte[]> byteBlocks = new ArrayList<byte[]>();
+        ArrayList<byte[]> byteBlocks = new ArrayList<>();
 
         // 计算切割blocks个数
         long bytelength = localFile.length();
@@ -269,5 +273,9 @@ public class DFSClient {
             e.printStackTrace();
         }
         return byteBlocks;
+    }
+
+    public String getSplitStr() {
+        return splitStr;
     }
 }

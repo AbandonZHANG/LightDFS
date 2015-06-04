@@ -26,6 +26,7 @@ public class DFSDataNodeConsole {
         System.out.println("**                               DataNode                                **");
         System.out.println("**                                                                       **");
         System.out.println("***************************************************************************");
+        System.out.println("Data node ID: "+dataNodeRPC.datanodeID);
         System.out.println("DataNode server running...");
     }
 }

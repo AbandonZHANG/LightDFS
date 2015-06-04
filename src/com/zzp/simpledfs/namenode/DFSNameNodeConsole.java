@@ -9,7 +9,7 @@ public class DFSNameNodeConsole {
     public static void main(String[] args){
         DFSNameNodeConsole namenode = new DFSNameNodeConsole();
         try{
-            namenode.rpcService = new DFSNameNode();
+            namenode.rpcService = DFSNameNode.getInstance();
             namenode.rpcService.initialize();
         }
         catch (Exception e){
@@ -17,7 +17,6 @@ public class DFSNameNodeConsole {
         }
         namenode.printHello();
         namenode.readUserCommand();
-        return ;
     }
     public void printHello(){
         System.out.println("***************************************************************************");

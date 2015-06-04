@@ -12,18 +12,19 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Properties;
+import java.util.Scanner;
+import java.util.UUID;
 
 public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRPCInterface, Runnable{
     DFSDataNode() throws RemoteException {
         super();
     }
-
     Registry registry;  // RMI Registry
     DataNodeNameNodeRPCInterface datanodeRPC;
     String datanodeIp, datanodePort, namenodeIp, namenodePort;
     String blocksDirectory, absoluteBlockDirectory;  // 数据块存储目录
     ArrayList<String> blocks;  // 此数据节点上的数据块列表
-    String datanodeID;  // 设备标识：DN-IP-Port
+    String datanodeID;
 
     private class JumpProperties{
         String datanodeName;
@@ -33,10 +34,10 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
 
     public void run(){
         try{
-            datanodeRPC = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://"+namenodeIp+":"+namenodePort+"/DFSNameNodeConsole");
+            datanodeRPC = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://"+namenodeIp+":"+namenodePort+"/DFSNameNode");
         }
         catch (Exception e){
-            e.printStackTrace();
+            System.out.println("[ERROR!] The Namenode RMI serve is not found!");
         }
 
         if(register()){
@@ -55,7 +56,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
             // 启动 rmiregistry
             registry = LocateRegistry.createRegistry(Integer.valueOf(datanodePort));
             // 绑定 RMI 服务
-            Naming.rebind("rmi://"+datanodeIp+":"+datanodePort+"/DFSDataNodeConsole", this);
+            Naming.rebind("rmi://"+datanodeIp+":"+datanodePort+"/DFSDataNode", this);
             //System.out.println("The DataNode RMI is running...");
         }
         catch (Exception e){
@@ -63,6 +64,9 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
         }
     }
     public void initialize(){
+        // 读取or生成数据节点全局唯一ID
+        readDataNodeID();
+
         // 读取配置文件datanode_properties.xml
         readConfigFile();
 
@@ -70,10 +74,26 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
         blocks = new ArrayList<String>();
         loadLocalBlocks(new File(absoluteBlockDirectory));
     }
-    /**
-     * 读取 Properties 配置文件:datanode.xml
-     */
-    public void readConfigFile(){
+    private void readDataNodeID(){
+        File datanodeIDFile = new File("datanodecore");
+        try {
+            if (datanodeIDFile.exists()) {
+                Scanner in = new Scanner(new FileReader(datanodeIDFile));
+                datanodeID = in.next();
+                in.close();
+            } else {
+                datanodeIDFile.createNewFile();
+                datanodeID = "DN" + UUID.randomUUID().toString();
+                BufferedWriter bufWriter = new BufferedWriter(new FileWriter(datanodeIDFile));
+                bufWriter.write(datanodeID);
+                bufWriter.close();
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+    private void readConfigFile(){
         Properties props = new Properties();
         try{
             InputStream fin = new FileInputStream("datanode.xml");
@@ -81,8 +101,6 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
             fin.close();
             datanodeIp = props.getProperty("ip");
             datanodePort = props.getProperty("port");
-            //生成 DataNode ID
-            datanodeID = "DN-" + datanodeIp + "-" + datanodePort;
 
             namenodeIp = props.getProperty("namenodeip");
             namenodePort = props.getProperty("namenodeport");

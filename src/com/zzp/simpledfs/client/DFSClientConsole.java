@@ -12,8 +12,8 @@ import java.util.*;
 
 public class DFSClientConsole {
     DFSClient dfsClient;
-    String loginUserName = new String();
-    final Stack<String> dir = new Stack();  // 当前client所在DFS目录，初始为根目录用户名
+    String loginUserName;
+    final Stack<String> dir = new Stack<>();  // 当前client所在DFS目录，初始为根目录用户名
 
     public static void main(String[] args){
         DFSClientConsole client = new DFSClientConsole();
@@ -53,14 +53,12 @@ public class DFSClientConsole {
             userLogin();
         }
         else{
-            String userName = tmpInput;
             //String password = new String(System.console().readPassword("[Login] Password:"));
             System.out.print("[Login] Password:");
             String password = in.next();
             try{
-                if(dfsClient.login(userName, password)){
-                    loginUserName = userName;
-                    return;
+                if(dfsClient.login(tmpInput, password)){
+                    loginUserName = tmpInput;
                 }
                 else{
                     System.out.println("[ERROR!] User name or password wrong!");
@@ -149,16 +147,10 @@ public class DFSClientConsole {
             if(cmdArray.length != 3){
                 System.out.println("Wrong command format!");
             }
-            else{
-                //dfsClient.renameFile(getAbsolutelyDFSLocalPath(cmdArray[1]), getAbsolutelyDFSLocalPath(cmdArray[2]));
-            }
         }
         else if(cmdArray[0].equals("removefile")){
             if(cmdArray.length != 2){
                 System.out.println("Wrong command format!");
-            }
-            else{
-                //dfsClient.removeFile(getAbsolutelyDFSLocalPath(cmdArray[1]));
             }
         }
         else if(cmdArray[0].equals("quit")){
@@ -305,16 +297,20 @@ public class DFSClientConsole {
             System.out.println("[ERROR!] File not found!");
         }
     }
-    public void changeCurrentPath(String path){
-        String[] paths = path.split("\\\\");
+    public void changeCurrentPath(String pathName){
+        String[] paths;
+        if(dfsClient.getSplitStr().equals("\\")){
+            paths = pathName.split("\\\\");
+        }
+        else{
+            paths = pathName.split(dfsClient.getSplitStr());
+        }
         if(paths[0].equals("")){
             // 绝对路径
             dir.clear();
         }
         for(String eachpath:paths){
-            if(eachpath.equals(""))
-                continue;
-            else
+            if(!eachpath.equals(""))
                 dir.push(eachpath);
         }
     }
@@ -323,9 +319,9 @@ public class DFSClientConsole {
      * @return 返回当前目录绝对路径：\dir1\dir2\...\
      */
     public String getCurrentPath(){
-        String res = new String("\\");
+        String res = dfsClient.getSplitStr();
         for(String eachpath:dir){
-            res += eachpath+"\\";
+            res += eachpath+dfsClient.getSplitStr();
         }
         return res;
     }
@@ -335,8 +331,15 @@ public class DFSClientConsole {
      * @return 返回绝对路径：\dir1\dir2\...\
      */
     public String getAbsolutelyDFSLocalPath(String pathName){
-        String res = new String();
-        String[] paths = pathName.split("\\\\");
+        String res = "";
+        String[] paths;
+        if(dfsClient.getSplitStr().equals("\\")){
+            paths = pathName.split("\\\\");
+        }
+        else{
+            paths = pathName.split(dfsClient.getSplitStr());
+        }
+
         for(int i = 0; i < paths.length; i ++){
             if(i == 0){
                 // 如果是绝对路径
@@ -344,11 +347,11 @@ public class DFSClientConsole {
                     res += getCurrentPath();
                 }
                 else {
-                    res += "\\";
+                    res += dfsClient.getSplitStr();
                     continue;
                 }
             }
-            res += paths[i] + "\\";
+            res += paths[i] + dfsClient.getSplitStr();
         }
         return res;
     }

@@ -8,28 +8,34 @@ import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.RMISocketFactory;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
 public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNodeRPCInterface,ClientNameNodeRPCInterface,Runnable{
+    public static DFSNameNode getInstance() throws IOException{
+        // 设定数据传输Socket
+        RMISocketFactory.setSocketFactory(new DFSRMISocket());
+        return new DFSNameNode();
+    }
     HashMap<String, DFSUser> dfsUsers;  // 用户列表，需要永久化存储
 
     DFSINode inode;    // DFS文件目录, 需要永久化存储
     HashMap<String, DFSFileBlockMapping> fileBlockMapping; // 文件-数据块映射, 需要永久化存储
 
-    final HashMap<String, String> blockDataNodeMappings = new HashMap<String, String>();    // 数据块-数据节点映射, 由数据节点发送
-    final HashMap<String, DFSDataNodeState> datanodeStates = new HashMap<String, DFSDataNodeState>();     // 当前活跃数据节点状态
+    final HashMap<String, String> blockDataNodeMappings = new HashMap<>();    // 数据块-数据节点映射, 由数据节点发送
+    final HashMap<String, DFSDataNodeState> datanodeStates = new HashMap<>();     // 当前活跃数据节点状态
 
     // 白名单include, exclude
-    final ArrayList<String> includeNodes = new ArrayList<String>();
-    final ArrayList<String> excludeNodes = new ArrayList<String>();
+    final ArrayList<String> includeNodes = new ArrayList<>();
+    final ArrayList<String> excludeNodes = new ArrayList<>();
     // 一致性哈希
     final DFSConsistentHashing consistentHash = new DFSConsistentHashing();
 
     Registry registry;  // RMI Registry
     String rpcIp, rpcPort;        // RMI 服务端口号
 
-    DFSNameNode() throws RemoteException {
+    private DFSNameNode() throws RemoteException {
         // Necessary to call UnicastRemoteObject();
         super();
     };
@@ -69,7 +75,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
         }
 
         if(!filemapFile.exists()){
-            fileBlockMapping = new HashMap<String, DFSFileBlockMapping>();
+            fileBlockMapping = new HashMap<>();
         }
         else{
             try {
@@ -82,7 +88,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
         }
 
         if(!usersFile.exists()){
-            dfsUsers = new HashMap<String, DFSUser>();
+            dfsUsers = new HashMap<>();
         }
         else{
             try {
@@ -129,6 +135,9 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
             InputStream fin = new FileInputStream("namenode.xml");
             props.loadFromXML(fin);
             fin.close();
+            String os = props.getProperty("os");
+            if(os.equals("windows"))
+                DFSINode.splitStr = "\\";
             rpcIp = props.getProperty("ip");
             rpcPort = props.getProperty("port");
             DFSUser.initUserSpace = Integer.valueOf(props.getProperty("inituserspace"));
@@ -144,7 +153,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
             // 启动 rmiregistry
             registry = LocateRegistry.createRegistry(Integer.valueOf(rpcPort));
             // 绑定 RMI 服务
-            Naming.rebind("rmi://"+rpcIp+":"+rpcPort+"/DFSNameNodeConsole", this);
+            Naming.rebind("rmi://"+rpcIp+":"+rpcPort+"/DFSNameNode", this);
             System.out.println("[INFO] The NameNode RMI is running...");
         }
         catch (Exception e){
@@ -176,7 +185,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
             FileReader fReader = new FileReader(File);
             BufferedReader bfReader = new BufferedReader(fReader);
             try{
-                String tmpS = null;
+                String tmpS;
                 while((tmpS = bfReader.readLine())!=null){
                     if (include)
                         includeNodes.add(tmpS);
@@ -191,16 +200,15 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
     }
 
     public void listBlocks(){
-        for (Map.Entry entry : blockDataNodeMappings.entrySet()){
+        for (Map.Entry<String, String> entry : blockDataNodeMappings.entrySet()){
             System.out.println(entry.getKey() + "    Affiliated with DataNode: " + entry.getValue());
         }
     }
 
     public void listFileBlockMappings(){
-        // foreach
-        for (Map.Entry entry : fileBlockMapping.entrySet()){
+        for (Map.Entry<String, DFSFileBlockMapping> entry : fileBlockMapping.entrySet()){
             System.out.println("---"+entry.getKey());
-            DFSFileBlockMapping thefileBlockMapping = (DFSFileBlockMapping)entry.getValue();
+            DFSFileBlockMapping thefileBlockMapping = entry.getValue();
             for (String block:thefileBlockMapping.blocks){
                 System.out.println("          ---"+block);
             }
@@ -208,7 +216,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
     }
 
     /**
-     * @param datanodeID
+     * @param datanodeID 数据节点标识符
      * @return 如果数据节点未连接返回1；如果数据节点正在连接返回2；如果数据节点不在白名单中返回0
      */
     public int checkNodeConnection(String datanodeID){
@@ -271,9 +279,9 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
     public boolean unRegisterDataNode(String datanodeID) throws RemoteException{
         if(checkNodeConnection(datanodeID) == 2){
             // 删除数据节点下的映射
-            Iterator iter = blockDataNodeMappings.entrySet().iterator();
+            Iterator<Map.Entry<String, String>> iter = blockDataNodeMappings.entrySet().iterator();
             while(iter.hasNext()){
-                Map.Entry entry = (Map.Entry)iter.next();
+                Map.Entry<String, String> entry = iter.next();
                 if(entry.getValue().equals(datanodeID)){
                     // 循环中删除调用Iterator的remove才是安全的
                     iter.remove();
@@ -325,16 +333,9 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
 
     @Override
     public boolean login(String userName, String password) throws RemoteException{
-        if(dfsUsers.containsKey(userName)){
+        if(dfsUsers.containsKey(userName) && password.equals(dfsUsers.get(userName).base64Password)){
             DFSUser theUser = dfsUsers.get(userName);
-            if(password.equals(theUser.base64Password)){
-                // 标记该userID登陆
-                // theUser.userID.add(userID);
-                return true;
-            }
-            else{
-                return false;
-            }
+            return password.equals(theUser.base64Password);
         }
         else{
             return false;
@@ -405,7 +406,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
         newFileBlockMapping.filePath = inodePath;
         newFileBlockMapping.fileSize = fileSize;
         newFileBlockMapping.ifLittleFile = false;
-        newFileBlockMapping.blocks = new ArrayList<String>();
+        newFileBlockMapping.blocks = new ArrayList<>();
 
         // 生成block标识
         for (int i = 0; i < blockNum; ++i) {
@@ -474,7 +475,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
             System.out.println("updateDFSInode function error!");
         }
         // 删除对应的文件-数据块映射以及获取数据块列表和数据节点列表
-        long fileSize = 0;
+        long fileSize;
         if(fileBlockMapping.containsKey(inodePath)){
             // 获取文件对应的数据块列表
             DFSFileBlockMapping fileBlocks = fileBlockMapping.get(inodePath);
@@ -571,7 +572,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
         if(!dfsUsers.containsKey(userName)){
             throw new UserNotFoundException();
         }
-        String res = new String("");
+        String res = "";
         res += userName;
         res += '\\';
         if(dfspath.length() > 0) {

@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 public class DFSDataNodeState implements Serializable {
     private String datanodeID;
-    private DFSDataNodeRPCAddress addr;
+    private DFSDataNodeRPCAddress addr = new DFSDataNodeRPCAddress();
     private long totalSpace;    // 总空间大小，Byte
     private long freeSpace;     // 剩余空间大小，Byte
     private long usedSpace;     // 已用空间大小，Byte

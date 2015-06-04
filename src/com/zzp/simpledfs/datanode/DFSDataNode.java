@@ -5,7 +5,6 @@ import com.zzp.simpledfs.common.ClientDataNodeRPCInterface;
 import com.zzp.simpledfs.common.DataNodeNameNodeRPCInterface;
 
 import java.io.*;
-import java.net.InetAddress;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;

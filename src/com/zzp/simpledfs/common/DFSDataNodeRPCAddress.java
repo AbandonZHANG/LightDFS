@@ -2,6 +2,7 @@ package com.zzp.simpledfs.common;
 
 public class DFSDataNodeRPCAddress {
     private String ip, port;
+    public DFSDataNodeRPCAddress(){}
     public DFSDataNodeRPCAddress(String _ip, String _port){
         ip = _ip;
         port = _port;

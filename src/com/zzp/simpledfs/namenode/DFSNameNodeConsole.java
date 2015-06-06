@@ -2,14 +2,18 @@ package com.zzp.simpledfs.namenode;
 
 import com.zzp.simpledfs.common.DFSINode;
 
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.Properties;
 import java.util.Scanner;
 
 public class DFSNameNodeConsole {
     DFSNameNode rpcService;
     public static void main(String[] args){
         DFSNameNodeConsole namenode = new DFSNameNodeConsole();
+        String hostIp = readHostIp();
         try{
-            namenode.rpcService = DFSNameNode.getInstance();
+            namenode.rpcService = DFSNameNode.getInstance(hostIp);
             namenode.rpcService.initialize();
         }
         catch (Exception e){
@@ -77,5 +81,19 @@ public class DFSNameNodeConsole {
         System.out.println("    lsblocks      List the blocks list.");
         System.out.println("    lsfbmap       List the file-blocks list.");
         System.out.println("");
+    }
+    static public String readHostIp(){
+        Properties props = new Properties();
+        String hostIp=null;
+        try{
+            InputStream fin = new FileInputStream("namenode.xml");
+            props.loadFromXML(fin);
+            fin.close();
+            hostIp = props.getProperty("ip");
+        }
+        catch (Exception e){
+            System.out.println("[ERROR!] Read config file error!");
+        }
+        return hostIp;
     }
 }

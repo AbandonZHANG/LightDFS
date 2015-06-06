@@ -16,21 +16,28 @@ import java.util.Scanner;
 import java.util.UUID;
 
 public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRPCInterface, Runnable{
-    DFSDataNode() throws RemoteException {
+    public static DFSDataNode getInstance(String hostIp) throws RemoteException{
+        // 设定RMI服务器ip地址
+        System.setProperty("java.rmi.server.hostname",hostIp);
+        return new DFSDataNode();
+    }
+
+    private DFSDataNode() throws RemoteException {
         super();
     }
+
     Registry registry;  // RMI Registry
     DataNodeNameNodeRPCInterface datanodeRPC;
     String datanodeIp, datanodePort, namenodeIp, namenodePort;
     String blocksDirectory, absoluteBlockDirectory;  // 数据块存储目录
     ArrayList<String> blocks;  // 此数据节点上的数据块列表
     String datanodeID;
+    private final JumpProperties jumpProperties = new JumpProperties();
 
     private class JumpProperties{
         String datanodeName;
         int perSeconds;     // 每隔N ms发送一次心跳
     }
-    private final JumpProperties jumpProperties = new JumpProperties();
 
     public void run(){
         try{
@@ -63,6 +70,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
             e.printStackTrace();
         }
     }
+
     public void initialize(){
         // 读取or生成数据节点全局唯一ID
         readDataNodeID();
@@ -74,6 +82,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
         blocks = new ArrayList<String>();
         loadLocalBlocks(new File(absoluteBlockDirectory));
     }
+
     private void readDataNodeID(){
         File datanodeIDFile = new File("datanodecore");
         try {
@@ -93,6 +102,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
             e.printStackTrace();
         }
     }
+
     private void readConfigFile(){
         Properties props = new Properties();
         try{
@@ -115,10 +125,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
             System.out.println("[ERROR!] Read config file error!");
         }
     }
-    /**
-     * 读取本地数据块列表
-     * @param path
-     */
+
     public void loadLocalBlocks(File path){
         blocks.clear();
         if(path.isDirectory()){
@@ -132,15 +139,14 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
             }
         }
     }
-    /**
-     * 列出当前数据节点中的所有数据块列表
-     */
+
     public void listBlocks(){
         System.out.println("This DataNode has following blocks:");
         for(String block:blocks){
             System.out.println("[Blocks]"+block);
         }
     }
+
     public DFSDataNodeState getCurrentState(){
         DFSDataNodeState myState = new DFSDataNodeState();
         File workDir = new File(System.getProperty("user.dir"));
@@ -152,9 +158,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
         myState.setUsedSpace(workDir.getUsableSpace());
         return myState;
     }
-    /**
-     * 向主控服务器请求连接
-     */
+
     public boolean register(){
         System.out.println("[INFO] Sending register application to the namenode ...");
         DFSDataNodeState myState = getCurrentState();
@@ -166,9 +170,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
         }
         return false;
     }
-    /**
-     * 向主控服务器发送本地数据块目录
-     */
+
     public void sendBlockRecord(){
         System.out.println("[INFO] Sending block records to the namenode ...");
         try{
@@ -179,6 +181,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
             System.out.println("[ERROR!] The Namenode RMI serve is not found!");
         }
     }
+
     public void sendNodeStates(){
         DFSDataNodeState myState = getCurrentState();
         try {
@@ -188,15 +191,14 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
             System.out.println("[ERROR!] The Namenode RMI serve is not found!");
         }
     }
-    /**
-     * 向主控服务器发送心跳包。心跳包不包含任何信息，仅为确认DataNode存活
-     */
+
     public void sendJump(){
         System.out.println("[INFO] Sending node states to the namenode ...");
         DFSDataNodeJump jump = new DFSDataNodeJump(jumpProperties.datanodeName, namenodeIp, namenodePort, jumpProperties.perSeconds);
         // Thread类的start()才能实现线程,run()只是普通的类调用
         jump.start();
     }
+
     public void unRegister(){
         System.out.println("[INFO] Sending unregister request to the namenode ...");
         try{
@@ -206,6 +208,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
             System.out.println("[ERROR!] The Namenode RMI serve is not found!");
         }
     }
+
     public void close(){
         // 向NameNode发送注销申请
         unRegister();
@@ -253,6 +256,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
             throw new RemoteException("Failed to write remote data!");
         }
     }
+
     @Override
     public byte[] downloadBlock(String blockName)throws RemoteException, FileNotFoundException{
         File rFile = new File(absoluteBlockDirectory+"\\"+blockName);
@@ -272,6 +276,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
             }
         }
     }
+
     @Override
     public void deleteBlock(String blockName)throws RemoteException, FileNotFoundException{
         File rFile = new File(absoluteBlockDirectory+"\\"+blockName);

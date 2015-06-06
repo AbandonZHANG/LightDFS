@@ -5,21 +5,26 @@ import com.zzp.simpledfs.common.*;
 import java.io.*;
 import java.nio.file.FileAlreadyExistsException;
 import java.rmi.Naming;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.rmi.server.RMISocketFactory;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
 public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNodeRPCInterface,ClientNameNodeRPCInterface,Runnable{
-    public static DFSNameNode getInstance() throws IOException{
-        // 设定数据传输Socket
-        RMISocketFactory.setSocketFactory(new DFSRMISocket());
+    public static DFSNameNode getInstance(String hostIp) throws RemoteException{
+        // 设定RMI服务器ip地址
+        System.setProperty("java.rmi.server.hostname",hostIp);
         return new DFSNameNode();
     }
-    HashMap<String, DFSUser> dfsUsers;  // 用户列表，需要永久化存储
 
+    private DFSNameNode() throws RemoteException {
+        // Necessary to call UnicastRemoteObject();
+        super();
+    };
+
+    HashMap<String, DFSUser> dfsUsers;  // 用户列表，需要永久化存储
     DFSINode inode;    // DFS文件目录, 需要永久化存储
     HashMap<String, DFSFileBlockMapping> fileBlockMapping; // 文件-数据块映射, 需要永久化存储
 
@@ -29,16 +34,12 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
     // 白名单include, exclude
     final ArrayList<String> includeNodes = new ArrayList<>();
     final ArrayList<String> excludeNodes = new ArrayList<>();
+
     // 一致性哈希
     final DFSConsistentHashing consistentHash = new DFSConsistentHashing();
 
     Registry registry;  // RMI Registry
-    String rpcIp, rpcPort;        // RMI 服务端口号
-
-    private DFSNameNode() throws RemoteException {
-        // Necessary to call UnicastRemoteObject();
-        super();
-    };
+    String rpcIp, rpcPort;  // RMI 服务端口号
 
     public void initialize(){
         // 读取永久化存储的Inode和FileBlock Mapping
@@ -135,9 +136,6 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
             InputStream fin = new FileInputStream("namenode.xml");
             props.loadFromXML(fin);
             fin.close();
-            String os = props.getProperty("os");
-            if(os.equals("windows"))
-                DFSINode.splitStr = "\\";
             rpcIp = props.getProperty("ip");
             rpcPort = props.getProperty("port");
             DFSUser.initUserSpace = Integer.valueOf(props.getProperty("inituserspace"));
@@ -150,6 +148,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
 
     public void run(){
         try{
+
             // 启动 rmiregistry
             registry = LocateRegistry.createRegistry(Integer.valueOf(rpcPort));
             // 绑定 RMI 服务
@@ -320,6 +319,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
                 // 从INode节点中删除用户目录
 
                 // 删除用户文件及数据块
+
                 return true;
             }
             else{
@@ -390,7 +390,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
                       String filePath,
                       long fileSize,
                       int blockNum)
-            throws RemoteException, UserNotFoundException, NoEnoughSpaceException, FileNotFoundException, FileAlreadyExistsException {
+            throws RemoteException, NotBoundException, UserNotFoundException, NoEnoughSpaceException, FileNotFoundException, FileAlreadyExistsException {
 
         if(!dfsUsers.containsKey(userName)){
             throw new UserNotFoundException();
@@ -417,7 +417,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
             // 为数据块分配数据节点-负载均衡
             String datanodeID = consistentHash.getNode(newUUID.toString());
             if(datanodeID == null){
-                return null;
+                throw new NotBoundException();
             }
             DFSDataNodeState dataNodeState = datanodeStates.get(datanodeID);
 
@@ -460,35 +460,43 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
     }
 
     @Override
-    public ArrayList< Map.Entry<String, DFSDataNodeRPCAddress> > removeDFSFile(String userName, String filePath) throws RemoteException, UserNotFoundException, FileNotFoundException{
+    public ArrayList< Map.Entry<String, DFSDataNodeRPCAddress> > removeDFSFile(String userName, String filePath) throws RemoteException, NotBoundException, UserNotFoundException, FileNotFoundException{
         if(!dfsUsers.containsKey(userName)){
             throw new UserNotFoundException();
         }
-
         ArrayList< Map.Entry<String, DFSDataNodeRPCAddress> > blockDatanodes = new ArrayList<>();
         String inodePath = getINodePath(userName, filePath);
-        // 删除对应INode节点信息
-        try{
-            DFSINode.updateDFSINode(inode, inodePath, 12);
-        }
-        catch (FileAlreadyExistsException e){
-            System.out.println("updateDFSInode function error!");
-        }
+
         // 删除对应的文件-数据块映射以及获取数据块列表和数据节点列表
         long fileSize;
         if(fileBlockMapping.containsKey(inodePath)){
             // 获取文件对应的数据块列表
             DFSFileBlockMapping fileBlocks = fileBlockMapping.get(inodePath);
             fileSize = fileBlocks.fileSize;
-            // 删除对应的文件-数据块列表
-            fileBlockMapping.remove(inodePath);
             // 获取所有数据块对应的数据节点
             for (String block:fileBlocks.blocks){
+                if(!blockDataNodeMappings.containsKey(block)){
+                    throw new NotBoundException();
+                }
                 String datanode = blockDataNodeMappings.get(block);
-                blockDataNodeMappings.remove(block);
+                if(!datanodeStates.containsKey(datanode)){
+                    throw new NotBoundException();
+                }
                 DFSDataNodeState dataNodeState = datanodeStates.get(datanode);
                 blockDatanodes.add(new AbstractMap.SimpleEntry<>(block, new DFSDataNodeRPCAddress(dataNodeState.getIp(), dataNodeState.getPort())));
+                // 删除对应的数据块-数据节点映射
+                blockDataNodeMappings.remove(block);
             }
+
+            // 删除对应INode节点信息
+            try{
+                DFSINode.updateDFSINode(inode, inodePath, 12);
+            }
+            catch (FileAlreadyExistsException e){
+                System.out.println("updateDFSInode function error!");
+            }
+            // 删除对应的文件-数据块列表
+            fileBlockMapping.remove(inodePath);
         }
         else{
             throw new FileNotFoundException();
@@ -568,22 +576,14 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
         return res;
     }
 
-    private String getINodePath(String userName, String dfspath) throws FileNotFoundException, UserNotFoundException{
+    private String getINodePath(String userName, String dfsPath) throws FileNotFoundException, UserNotFoundException{
         if(!dfsUsers.containsKey(userName)){
             throw new UserNotFoundException();
         }
-        String res = "";
-        res += userName;
-        res += '\\';
-        if(dfspath.length() > 0) {
-            if (dfspath.charAt(0) == '\\')
-                dfspath = dfspath.substring(1, dfspath.length());
-            res += dfspath;
-        }
-        // 消除末尾'\'
-        if(res.charAt(res.length()-1) == '\\'){
+        String res = userName + dfsPath;
+        // 消除末尾分隔符
+        if(res.charAt(res.length()-1) == DFSINode.splitChar)
             res = res.substring(0, res.length()-1);
-        }
         return res;
     }
 }

@@ -11,6 +11,7 @@ public class DFSINode implements Serializable {
         return new DFSINode(name, ifDir);
     }
 
+    public static char splitChar = '/';    // 目录分隔符
     public static String splitStr = "/";
     public String name;    // 文件or目录名称
     public HashMap<String, DFSINode> childInode;   // childInode == null 表示该节点是文件, childInode != null 表示该节点是目录
@@ -56,12 +57,7 @@ public class DFSINode implements Serializable {
     public static DFSINode updateDFSINode(DFSINode inode, String inodePath, int method) throws RemoteException, FileNotFoundException, FileAlreadyExistsException {
         // 将路径分隔出各级目录来
         String[] splits;
-        if(splitStr.equals("\\")){
-            splits = inodePath.split("\\\\");
-        }
-        else{
-            splits = inodePath.split(splitStr);
-        }
+        splits = inodePath.split(splitStr);
 
         int length = splits.length-1;
 

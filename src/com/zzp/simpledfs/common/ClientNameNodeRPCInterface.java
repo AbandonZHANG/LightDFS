@@ -2,6 +2,7 @@ package com.zzp.simpledfs.common;
 
 import java.io.FileNotFoundException;
 import java.nio.file.FileAlreadyExistsException;
+import java.rmi.NotBoundException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
@@ -36,14 +37,14 @@ public interface ClientNameNodeRPCInterface extends Remote {
         ifExistsDFSINode(String userName, String path)
             throws RemoteException, UserNotFoundException;
     void
-    renameDFSFile(String userName, String filePath, String newFilePath)
+        renameDFSFile(String userName, String filePath, String newFilePath)
             throws RemoteException, UserNotFoundException, FileNotFoundException, FileAlreadyExistsException;
     ArrayList< Map.Entry<String, DFSDataNodeRPCAddress> >
         newDFSFileMapping(String userName, String filePath, long fileSize, int blockNum)
-            throws RemoteException, UserNotFoundException, NoEnoughSpaceException, FileNotFoundException, FileAlreadyExistsException;
+            throws RemoteException, NotBoundException, UserNotFoundException, NoEnoughSpaceException, FileNotFoundException, FileAlreadyExistsException;
     ArrayList< Map.Entry<String, DFSDataNodeRPCAddress> >
         removeDFSFile(String userName, String filePath)
-            throws RemoteException, UserNotFoundException, FileNotFoundException;
+            throws RemoteException, NotBoundException, UserNotFoundException, FileNotFoundException;
     ArrayList< Map.Entry<String, DFSDataNodeRPCAddress> >
         lookupFileBlocks(String userName, String filePath)
             throws RemoteException, UserNotFoundException, FileNotFoundException;

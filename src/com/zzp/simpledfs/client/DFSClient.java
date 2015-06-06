@@ -17,7 +17,6 @@ public class DFSClient {
     private ClientNameNodeRPCInterface clientRmi;
     private String loginUserName;    // 当前登陆用户名
     private String namenodeIp, namenodePort;  // 连接的NameNode ip, port
-    private String splitStr = "/";
     private int blockSize;
     DFSClient() throws RemoteException{
         // 读取配置文件client.xml
@@ -39,9 +38,6 @@ public class DFSClient {
             InputStream fin = new FileInputStream(file);
             props.loadFromXML(fin);
             fin.close();
-            String os = props.getProperty("os");
-            if (os.equals("windows"))
-                splitStr = "\\";
             namenodeIp = props.getProperty("namenodeip");
             namenodePort = props.getProperty("namenodeport");
             blockSize = Integer.valueOf(props.getProperty("blocksize"));
@@ -273,9 +269,5 @@ public class DFSClient {
             e.printStackTrace();
         }
         return byteBlocks;
-    }
-
-    public String getSplitStr() {
-        return splitStr;
     }
 }

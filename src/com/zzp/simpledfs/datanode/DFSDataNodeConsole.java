@@ -1,13 +1,17 @@
 package com.zzp.simpledfs.datanode;
 
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.Properties;
+
 public class DFSDataNodeConsole {
     DFSDataNode dataNodeRPC;
 
     public static void main(String[] args){
         DFSDataNodeConsole datanode = new DFSDataNodeConsole();
+        String hostIp = readHostIp();
         try {
-            datanode.dataNodeRPC = new DFSDataNode();
-            // 初始化
+            datanode.dataNodeRPC = DFSDataNode.getInstance(hostIp);
             datanode.dataNodeRPC.initialize();
         }
         catch (Exception e){
@@ -28,5 +32,19 @@ public class DFSDataNodeConsole {
         System.out.println("***************************************************************************");
         System.out.println("Data node ID: "+dataNodeRPC.datanodeID);
         System.out.println("DataNode server running...");
+    }
+    static public String readHostIp(){
+        Properties props = new Properties();
+        String hostIp=null;
+        try{
+            InputStream fin = new FileInputStream("datanode.xml");
+            props.loadFromXML(fin);
+            fin.close();
+            hostIp = props.getProperty("ip");
+        }
+        catch (Exception e){
+            System.out.println("[ERROR!] Read config file error!");
+        }
+        return hostIp;
     }
 }

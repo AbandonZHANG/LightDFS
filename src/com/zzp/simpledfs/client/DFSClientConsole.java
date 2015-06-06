@@ -298,13 +298,7 @@ public class DFSClientConsole {
         }
     }
     public void changeCurrentPath(String pathName){
-        String[] paths;
-        if(dfsClient.getSplitStr().equals("\\")){
-            paths = pathName.split("\\\\");
-        }
-        else{
-            paths = pathName.split(dfsClient.getSplitStr());
-        }
+        String[] paths = pathName.split(DFSINode.splitStr);
         if(paths[0].equals("")){
             // 绝对路径
             dir.clear();
@@ -316,29 +310,24 @@ public class DFSClientConsole {
     }
     /**
      * 将当前目录各级dir转化为String
-     * @return 返回当前目录绝对路径：\dir1\dir2\...\
+     * @return 返回当前目录绝对路径：/dir1/dir2/.../
      */
     public String getCurrentPath(){
-        String res = dfsClient.getSplitStr();
+        String res = "";
+        res += DFSINode.splitChar;
         for(String eachpath:dir){
-            res += eachpath+dfsClient.getSplitStr();
+            res += eachpath+DFSINode.splitChar;
         }
         return res;
     }
     /**
      * 将参数的路径转换为绝对路径
-     * @param pathName  绝对路径: \dir1\dir2\...\, 相对路径: dir1\dir2\...\
-     * @return 返回绝对路径：\dir1\dir2\...\
+     * @param pathName  绝对路径: /dir1/dir2/.../, 相对路径: dir1/dir2/.../
+     * @return 返回绝对路径：/dir1/dir2/.../
      */
     public String getAbsolutelyDFSLocalPath(String pathName){
         String res = "";
-        String[] paths;
-        if(dfsClient.getSplitStr().equals("\\")){
-            paths = pathName.split("\\\\");
-        }
-        else{
-            paths = pathName.split(dfsClient.getSplitStr());
-        }
+        String[] paths= pathName.split(DFSINode.splitStr);
 
         for(int i = 0; i < paths.length; i ++){
             if(i == 0){
@@ -347,11 +336,11 @@ public class DFSClientConsole {
                     res += getCurrentPath();
                 }
                 else {
-                    res += dfsClient.getSplitStr();
+                    res += DFSINode.splitChar;
                     continue;
                 }
             }
-            res += paths[i] + dfsClient.getSplitStr();
+            res += paths[i] + DFSINode.splitChar;
         }
         return res;
     }

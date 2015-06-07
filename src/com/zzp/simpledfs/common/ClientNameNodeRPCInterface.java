@@ -47,7 +47,7 @@ public interface ClientNameNodeRPCInterface extends Remote {
             throws RemoteException, NotBoundException, UserNotFoundException, FileNotFoundException;
     ArrayList< Map.Entry<String, DFSDataNodeRPCAddress> >
         lookupFileBlocks(String userName, String filePath)
-            throws RemoteException, UserNotFoundException, FileNotFoundException;
+            throws RemoteException, NotBoundException, UserNotFoundException, FileNotFoundException;
     DFSINode
         getDFSINode(String userName, String path)
             throws RemoteException, UserNotFoundException, FileNotFoundException;

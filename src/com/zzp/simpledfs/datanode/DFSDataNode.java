@@ -1,5 +1,6 @@
 package com.zzp.simpledfs.datanode;
 
+import com.zzp.simpledfs.common.DFSBlock;
 import com.zzp.simpledfs.common.DFSDataNodeState;
 import com.zzp.simpledfs.common.ClientDataNodeRPCInterface;
 import com.zzp.simpledfs.common.DataNodeNameNodeRPCInterface;
@@ -30,7 +31,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
     DataNodeNameNodeRPCInterface datanodeRPC;
     String datanodeIp, datanodePort, namenodeIp, namenodePort;
     String blocksDirectory, absoluteBlockDirectory;  // 数据块存储目录
-    ArrayList<String> blocks;  // 此数据节点上的数据块列表
+    ArrayList<DFSBlock> blocks;  // 此数据节点上的数据块列表
     String datanodeID;
     private final JumpProperties jumpProperties = new JumpProperties();
 
@@ -79,7 +80,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
         readConfigFile();
 
         // 初始化，读取数据块目录
-        blocks = new ArrayList<String>();
+        blocks = new ArrayList<>();
         loadLocalBlocks(new File(absoluteBlockDirectory));
     }
 
@@ -133,17 +134,10 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
             if(blockFiles != null) {
                 for (File blockFile : blockFiles) {
                     if (!blockFile.isDirectory()) {
-                        blocks.add(blockFile.getName());
+                        blocks.add(new DFSBlock(datanodeID, blockFile.getName(), blockFile.length()));
                     }
                 }
             }
-        }
-    }
-
-    public void listBlocks(){
-        System.out.println("This DataNode has following blocks:");
-        for(String block:blocks){
-            System.out.println("[Blocks]"+block);
         }
     }
 
@@ -194,7 +188,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
 
     public void sendJump(){
         System.out.println("[INFO] Sending node states to the namenode ...");
-        DFSDataNodeJump jump = new DFSDataNodeJump(jumpProperties.datanodeName, namenodeIp, namenodePort, jumpProperties.perSeconds);
+        DFSDataNodeJump jump = new DFSDataNodeJump(jumpProperties.datanodeName, datanodeRPC, jumpProperties.perSeconds);
         // Thread类的start()才能实现线程,run()只是普通的类调用
         jump.start();
     }
@@ -222,11 +216,6 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
         }
     }
 
-    /**
-     * @param content
-     * @param blockName
-     * @throws RemoteException
-     */
     @Override
     public void uploadBlock(byte[] content, String blockName)throws RemoteException{
         File wfile = new File(absoluteBlockDirectory+"\\"+blockName);
@@ -260,7 +249,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
     @Override
     public byte[] downloadBlock(String blockName)throws RemoteException, FileNotFoundException{
         File rFile = new File(absoluteBlockDirectory+"\\"+blockName);
-        byte[] res = null;
+        byte[] res;
         if(!rFile.exists()){
             throw new FileNotFoundException("Block not found!");
         }

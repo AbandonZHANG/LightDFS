@@ -11,4 +11,7 @@
 	<!-- 初始用户默认空间大小（MB） -->
     <entry  
         key="inituserspace">512</entry>
+	<!-- 数据节点检查间隔时间（ms）。多长时间内没有更新则表示数据节点已经断开连接，推荐设为数据节点心跳时间的2倍 -->
+    <entry  
+        key="intervaltime">12000</entry>
 </properties>

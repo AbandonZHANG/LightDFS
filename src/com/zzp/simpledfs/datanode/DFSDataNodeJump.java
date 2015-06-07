@@ -5,25 +5,24 @@ import com.zzp.simpledfs.common.DataNodeNameNodeRPCInterface;
 import java.rmi.Naming;
 
 public class DFSDataNodeJump extends Thread{
-    String datanodeName;
+    String datanodeID;
     int perSeconds;  // 每隔N ms发送一次心跳
-    String namenodeIp, namenodePort;
-    DFSDataNodeJump(String _datanodeName, String _namenodeIp, String _namenodePort, int _perSecond){
+    DataNodeNameNodeRPCInterface datanodeRPC;
+    DFSDataNodeJump(String _datanodeID, DataNodeNameNodeRPCInterface _datanodeRPC, int _perSecond){
         super();
-        datanodeName = _datanodeName;
-        namenodeIp = _namenodeIp;
-        namenodePort = _namenodePort;
+        datanodeID = _datanodeID;
+        datanodeRPC = _datanodeRPC;
         perSeconds = _perSecond;
     }
+    @Override
     public void run() {
         while(true) {
             try {
-                DataNodeNameNodeRPCInterface datanodeRmi = (DataNodeNameNodeRPCInterface) Naming.lookup("rmi://"+namenodeIp+":"+namenodePort+"/DFSNameNode");
-                datanodeRmi.sendDataNodeJump(datanodeName);
+                datanodeRPC.sendDataNodeJump(datanodeID);
                 sleep(perSeconds);
             } catch (Exception e) {
-                //e.printStackTrace();
-                System.out.println("The Namenode RMI serve is not found!");
+                System.out.println("[JUMP ERROR!] The Namenode RMI serve is not found!");
+                return ;
             }
         }
     }

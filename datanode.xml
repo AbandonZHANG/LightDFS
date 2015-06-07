@@ -17,7 +17,7 @@
 	<!-- 数据块存储目录 -->
     <entry  
         key="blockdir">datablocks</entry>
-	<!-- 每隔几毫秒发送一次心跳 -->
+	<!-- 心跳时间（ms）。每隔几毫秒发送一次心跳 -->
     <entry  
-        key="perseconds">60000</entry>
+        key="perseconds">6000</entry>
 </properties>

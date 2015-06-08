@@ -62,6 +62,9 @@ public class DFSNameNodeConsole {
             else if(cmdArray[0].equals("lsblocks")){
                 rpcService.listBlocks();
             }
+            else if(cmdArray[0].equals("lsdatanodes")){
+                rpcService.listDataNodes();;
+            }
             else if(cmdArray[0].equals("lsfbmap")){
                 rpcService.listFileBlockMappings();
             }
@@ -79,6 +82,7 @@ public class DFSNameNodeConsole {
         System.out.println("    close         Close the server job.");
         System.out.println("    ls            List the DFS directory.");
         System.out.println("    lsblocks      List the blocks list.");
+        System.out.println("    lsdatanodes   List the datanode list.");
         System.out.println("    lsfbmap       List the file-blocks list.");
         System.out.println("");
     }

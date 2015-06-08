@@ -2,8 +2,6 @@ package com.zzp.simpledfs.datanode;
 
 import com.zzp.simpledfs.common.DataNodeNameNodeRPCInterface;
 
-import java.rmi.Naming;
-
 public class DFSDataNodeJump extends Thread{
     String datanodeID;
     int perSeconds;  // 每隔N ms发送一次心跳
@@ -19,6 +17,7 @@ public class DFSDataNodeJump extends Thread{
         while(true) {
             try {
                 datanodeRPC.sendDataNodeJump(datanodeID);
+                System.out.println("[INFO] Sending datanode jump...");
                 sleep(perSeconds);
             } catch (Exception e) {
                 System.out.println("[JUMP ERROR!] The Namenode RMI serve is not found!");

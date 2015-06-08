@@ -208,6 +208,12 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
         }
     }
 
+    public void listDataNodes(){
+        for(Map.Entry<String, DFSDataNodeState> entry : activeDatanodes.entrySet()){
+            System.out.println(entry.getKey());
+        }
+    }
+
     public void listFileBlockMappings(){
         for (Map.Entry<String, DFSFileBlockMapping> entry : fileBlockMapping.entrySet()){
             System.out.println("---"+entry.getKey());
@@ -278,7 +284,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
             datanode.setLastJumpTime(LocalDateTime.now());
             activeDatanodes.put(datanode.getDatanodeID(), datanode);
             // 注册一致性哈希节点
-            consistentHash.addNode(datanode.getDatanodeID(), datanode.getFreeSpace());
+            consistentHash.addNode(datanode.getDatanodeID());
             return true;
         }
         else{
@@ -471,6 +477,9 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
         // 遍历数据块列表
         for (String block:fileBlocks.blocks){
             // 在数据块-数据节点映射中查询数据块所属数据节点标识
+            if(!blockDataNodeMappings.containsKey(block)){
+                throw new FileNotFoundException();
+            }
             String datanodeID = blockDataNodeMappings.get(block).getDatanodeID();
             // 从当前活跃数据节点中查找对应ID的节点ip
             if(!activeDatanodes.containsKey(datanodeID))

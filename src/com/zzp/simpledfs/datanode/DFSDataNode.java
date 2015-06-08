@@ -81,7 +81,6 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
 
         // 初始化，读取数据块目录
         blocks = new ArrayList<>();
-        loadLocalBlocks(new File(absoluteBlockDirectory));
     }
 
     private void readDataNodeID(){
@@ -166,6 +165,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
     }
 
     public void sendBlockRecord(){
+        loadLocalBlocks(new File(absoluteBlockDirectory));
         System.out.println("[INFO] Sending block records to the namenode ...");
         try{
             datanodeRPC.sendDataNodeBlockList(datanodeID, blocks);

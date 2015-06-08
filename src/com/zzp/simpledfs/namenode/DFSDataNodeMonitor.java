@@ -36,7 +36,7 @@ public class DFSDataNodeMonitor extends Thread{
         while(true){
             for(Map.Entry<String, DFSDataNodeState> entry : activeDatanodes.entrySet()){
                 DFSDataNodeState thisDatanode = entry.getValue();
-                if(ChronoUnit.MICROS.between(thisDatanode.getLastJumpTime(), LocalDateTime.now()) > intervalTime){
+                if(ChronoUnit.MILLIS.between(thisDatanode.getLastJumpTime(), LocalDateTime.now()) > intervalTime){
                     // 标记断开连接
                     activeDatanodes.remove(thisDatanode.getDatanodeID());
                     // 更新exclude标记

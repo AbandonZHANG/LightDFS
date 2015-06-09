@@ -18,4 +18,10 @@ public class DFSUser implements Serializable{
     public long getFreeSpace(){
         return maxSpace-usedSpace;
     }
+    public long getUsedSpace(){
+        return usedSpace;
+    }
+    public long getTotalSpace(){
+        return maxSpace;
+    }
 }

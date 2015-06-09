@@ -26,5 +26,6 @@ public class DFSDataNodeJump extends Thread{
                 return ;
             }
         }
+        System.out.println("[INFO] The DataNode Jump is closed.");
     }
 }

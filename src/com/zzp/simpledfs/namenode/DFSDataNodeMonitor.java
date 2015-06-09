@@ -15,6 +15,7 @@ public class DFSDataNodeMonitor extends Thread{
     private ArrayList<String> excludeNodes;
     private DFSConsistentHashing consistentHash;
     private HashMap<String, DFSBlock> blockDataNodeMappings;
+    boolean ifRun;
 
     public DFSDataNodeMonitor(
             HashMap<String,
@@ -29,11 +30,12 @@ public class DFSDataNodeMonitor extends Thread{
         consistentHash = _consistentHash;
         blockDataNodeMappings = _blockDataNodeMappings;
         intervalTime = _intervalTime;
+        ifRun = true;
     }
 
     @Override
     public void run(){
-        while(true){
+        while(ifRun){
             for(Map.Entry<String, DFSDataNodeState> entry : activeDatanodes.entrySet()){
                 DFSDataNodeState thisDatanode = entry.getValue();
                 if(ChronoUnit.MILLIS.between(thisDatanode.getLastJumpTime(), LocalDateTime.now()) > intervalTime){
@@ -60,5 +62,6 @@ public class DFSDataNodeMonitor extends Thread{
                 return ;
             }
         }
+        System.out.println("[INFO] The DataNode Monitor is closed.");
     }
 }

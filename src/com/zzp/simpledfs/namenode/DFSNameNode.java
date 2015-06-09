@@ -25,7 +25,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
         super();
     };
 
-    HashMap<String, DFSUser> dfsUsers;  // 用户列表，需要永久化存储
+    public HashMap<String, DFSUser> dfsUsers;  // 用户列表，需要永久化存储
     DFSINode inode;    // DFS文件目录, 需要永久化存储
     HashMap<String, DFSFileBlockMapping> fileBlockMapping; // 文件-数据块映射, 需要永久化存储
     long intervalTime;  // 数据节点检查间隔时间
@@ -40,6 +40,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
     // 一致性哈希
     final DFSConsistentHashing consistentHash = new DFSConsistentHashing();
 
+    DFSDataNodeMonitor myDataNodeMonitor;
     Registry registry;  // RMI Registry
     String rpcIp, rpcPort;  // RMI 服务端口号
 
@@ -154,7 +155,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
             registry = LocateRegistry.createRegistry(Integer.valueOf(rpcPort));
             // 绑定 RMI 服务
             Naming.rebind("rmi://"+rpcIp+":"+rpcPort+"/DFSNameNode", this);
-            DFSDataNodeMonitor myDataNodeMonitor = new DFSDataNodeMonitor(activeDatanodes, excludeNodes, consistentHash, blockDataNodeMappings, intervalTime);
+            myDataNodeMonitor = new DFSDataNodeMonitor(activeDatanodes, excludeNodes, consistentHash, blockDataNodeMappings, intervalTime);
             myDataNodeMonitor.start();
             System.out.println("[INFO] The NameNode is running...");
         }
@@ -171,8 +172,8 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
             // 关闭 rmiregistry
             if(registry!=null)
                 UnicastRemoteObject.unexportObject(registry,true);
-            System.out.println("[INFO] The NameNode RMI is done...");
-            System.exit(0);
+            myDataNodeMonitor.ifRun = false;
+            System.out.println("[INFO] The NameNode RMI is closed.");
         }
         catch (Exception e){
             e.printStackTrace();

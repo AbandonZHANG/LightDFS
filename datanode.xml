@@ -7,7 +7,7 @@
         key="ip">172.30.59.25</entry>
 	<!-- RPC服务端口号 -->
     <entry  
-        key="port">2021</entry>
+        key="port">2022</entry>
 	<!-- 主控节点ip地址 -->	
     <entry  
         key="namenodeip">172.30.59.25</entry>

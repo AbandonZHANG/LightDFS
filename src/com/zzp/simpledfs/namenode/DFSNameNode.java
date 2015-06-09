@@ -30,12 +30,12 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
     HashMap<String, DFSFileBlockMapping> fileBlockMapping; // 文件-数据块映射, 需要永久化存储
     long intervalTime;  // 数据节点检查间隔时间
 
-    final HashMap<String, DFSBlock> blockDataNodeMappings = new HashMap<>();    // 数据块-数据节点映射, 由数据节点发送
-    final HashMap<String, DFSDataNodeState> activeDatanodes = new HashMap<>();     // 当前活跃数据节点状态
+    public final HashMap<String, DFSBlock> blockDataNodeMappings = new HashMap<>();    // 数据块-数据节点映射, 由数据节点发送
+    public final HashMap<String, DFSDataNodeState> activeDatanodes = new HashMap<>();     // 当前活跃数据节点状态
 
     // 白名单include, exclude
-    final ArrayList<String> includeNodes = new ArrayList<>();
-    final ArrayList<String> excludeNodes = new ArrayList<>();
+    public final ArrayList<String> includeNodes = new ArrayList<>();
+    public final ArrayList<String> excludeNodes = new ArrayList<>();
 
     // 一致性哈希
     final DFSConsistentHashing consistentHash = new DFSConsistentHashing();
@@ -49,8 +49,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
 
         // 读取数据服务器白名单
         try {
-            readIncludeFile("include", true);
-            readIncludeFile("exclude", false);
+            readIncludeFile();
         }
         catch (Exception e){
             System.out.println("[ERROR!] Failed to read include/exclude file! Check if the file is exists!");
@@ -168,6 +167,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
         try{
             // 数据永久化
             storeState();
+            writeIncludeFile();
             // 关闭 rmiregistry
             if(registry!=null)
                 UnicastRemoteObject.unexportObject(registry,true);
@@ -179,26 +179,53 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
         }
     }
 
-    public void readIncludeFile(String filename, boolean include) throws FileNotFoundException {
-        File File = new File(filename);
-        if(!File.exists()){
-            throw new FileNotFoundException("Node Include/Exclude File(include/exclude) not found!");
-        }
-        else{
-            FileReader fReader = new FileReader(File);
-            BufferedReader bfReader = new BufferedReader(fReader);
-            try{
+    public void readIncludeFile() throws FileNotFoundException {
+        File includeFile = new File("include");
+        File excludeFile = new File("exclude");
+        try{
+            if(!includeFile.exists()){
+                includeFile.createNewFile();
+            }
+            else{
+                FileReader fReader = new FileReader(includeFile);
+                BufferedReader bfReader = new BufferedReader(fReader);
                 String tmpS;
                 while((tmpS = bfReader.readLine())!=null){
-                    if (include)
-                        includeNodes.add(tmpS);
-                    else
-                        excludeNodes.add(tmpS);
+                    includeNodes.add(tmpS);
                 }
             }
-            catch (Exception e){
-                e.printStackTrace();
+            if(!excludeFile.exists()){
+                excludeFile.createNewFile();
             }
+            else{
+                FileReader fReader = new FileReader(excludeFile);
+                BufferedReader bfReader = new BufferedReader(fReader);
+                String tmpS;
+                while((tmpS = bfReader.readLine())!=null){
+                    excludeNodes.add(tmpS);
+                }
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public void writeIncludeFile(){
+        File includeFile = new File("include");
+        File excludeFile = new File("exclude");
+        try{
+            BufferedWriter includeWriter = new BufferedWriter(new FileWriter(includeFile));
+            BufferedWriter excludeWriter = new BufferedWriter(new FileWriter(excludeFile));
+            for(String datanodeID:includeNodes){
+                includeWriter.write(datanodeID + "\n");
+                excludeWriter.write(datanodeID + "\n");
+            }
+            includeWriter.close();
+            excludeWriter.close();
+        }
+        catch (Exception e){
+            e.printStackTrace();
         }
     }
 

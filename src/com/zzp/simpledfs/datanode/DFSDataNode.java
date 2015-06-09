@@ -33,6 +33,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
     String blocksDirectory, absoluteBlockDirectory;  // 数据块存储目录
     ArrayList<DFSBlock> blocks;  // 此数据节点上的数据块列表
     String datanodeID;
+    DFSDataNodeJump jump;
     private final JumpProperties jumpProperties = new JumpProperties();
 
     private class JumpProperties{
@@ -187,8 +188,8 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
     }
 
     public void sendJump(){
-        System.out.println("[INFO] Sending node states to the namenode ...");
-        DFSDataNodeJump jump = new DFSDataNodeJump(jumpProperties.datanodeName, datanodeRPC, jumpProperties.perSeconds);
+        System.out.println("[INFO] Sending datanode jump...");
+        jump = new DFSDataNodeJump(jumpProperties.datanodeName, datanodeRPC, jumpProperties.perSeconds);
         // Thread类的start()才能实现线程,run()只是普通的类调用
         jump.start();
     }
@@ -206,6 +207,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
     public void close(){
         // 向NameNode发送注销申请
         unRegister();
+        jump.ifRun = false;
         // 关闭RMI服务
         try{
             UnicastRemoteObject.unexportObject(registry, true);

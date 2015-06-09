@@ -3,6 +3,7 @@ package com.zzp.simpledfs.datanode;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.Scanner;
 
 public class DFSDataNodeConsole {
     DFSDataNode dataNodeRPC;
@@ -19,6 +20,15 @@ public class DFSDataNodeConsole {
         }
         datanode.printHello();
         datanode.dataNodeRPC.run();
+
+        Scanner in = new Scanner(System.in);
+        while(in.hasNext()){
+            String comm = in.next();
+            if(comm.equals("exit")){
+                datanode.dataNodeRPC.close();
+                System.exit(0);
+            }
+        }
     }
     public void printHello(){
         System.out.println("***************************************************************************");

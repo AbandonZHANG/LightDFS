@@ -5,7 +5,17 @@ import java.util.*;
 public class DFSConsistentHashing {
     static final private int virtualNumber = 32;
     static final private int unitSpace = 64*1024*1024;  // 当数据节点硬盘空间小于64M时从一致性哈希中删除
-
+    public class CHNode{
+        String nodeID;      // 节点名
+        ArrayList<String> nodeKeys;   // 节点在Consistent Hashing中Hash前的Key值
+        CHNode(String _nodeID, int virtualNumber){
+            nodeID = _nodeID;
+            nodeKeys = new ArrayList<>();
+            for(int i = 0; i < virtualNumber; i ++){
+                nodeKeys.add(UUID.randomUUID().toString());
+            }
+        }
+    }
     private final HashMap<String, CHNode> chNodes = new HashMap<>();
     private final TreeMap<Integer, String> chCircle = new TreeMap<>();
     public void addNode(String nodeName){

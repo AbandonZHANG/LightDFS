@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 
 public class DFSDataNodeState implements Serializable {
     private String datanodeID;
-    private DFSDataNodeRPCAddress addr = new DFSDataNodeRPCAddress();
+    public DFSDataNodeRPCAddress addr = new DFSDataNodeRPCAddress();
     private LocalDateTime lastJumpTime;     //上一次心跳的时间
     private long totalSpace;    // 总空间大小，Byte
     private long freeSpace;     // 剩余空间大小，Byte
@@ -17,22 +17,6 @@ public class DFSDataNodeState implements Serializable {
 
     public void setDatanodeID(String datanodeID) {
         this.datanodeID = datanodeID;
-    }
-
-    public String getIp() {
-        return this.addr.getIp();
-    }
-
-    public void setIp(String ip) {
-        this.addr.setIp(ip);
-    }
-
-    public String getPort() {
-        return this.addr.getPort();
-    }
-
-    public void setPort(String port) {
-        this.addr.setPort(port);
     }
 
     public long getTotalSpace() {

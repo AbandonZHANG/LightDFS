@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 public class DFSDataNodeMonitor extends Thread{
@@ -36,20 +37,23 @@ public class DFSDataNodeMonitor extends Thread{
     @Override
     public void run(){
         while(ifRun){
-            for(Map.Entry<String, DFSDataNodeState> entry : activeDatanodes.entrySet()){
+            Iterator<Map.Entry<String, DFSDataNodeState>> iter = activeDatanodes.entrySet().iterator();
+            while(iter.hasNext()){
+                Map.Entry<String, DFSDataNodeState> entry = iter.next();
                 DFSDataNodeState thisDatanode = entry.getValue();
                 if(ChronoUnit.MILLIS.between(thisDatanode.getLastJumpTime(), LocalDateTime.now()) > intervalTime){
                     // 标记断开连接
-                    activeDatanodes.remove(thisDatanode.getDatanodeID());
+                    iter.remove();
                     // 更新exclude标记
                     excludeNodes.add(thisDatanode.getDatanodeID());
                     // 更新一致性哈希
-                    consistentHash.removeNode(thisDatanode.getDatanodeID());
+                    // consistentHash.removeNode(thisDatanode.getDatanodeID());
                     // 更新数据块目录
-                    for(Map.Entry<String, DFSBlock> entryBlock:blockDataNodeMappings.entrySet()){
-                        DFSBlock thisBlock = entryBlock.getValue();
+                    Iterator<Map.Entry<String, DFSBlock>> iterBlock = blockDataNodeMappings.entrySet().iterator();
+                    while(iterBlock.hasNext()){
+                        DFSBlock thisBlock = iterBlock.next().getValue();
                         if(thisBlock.getDatanodeID().equals(thisDatanode.getDatanodeID())){
-                            blockDataNodeMappings.remove(thisBlock.getBlockName());
+                            iterBlock.remove();
                         }
                     }
                 }

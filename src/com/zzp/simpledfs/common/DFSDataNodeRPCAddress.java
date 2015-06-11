@@ -3,11 +3,19 @@ package com.zzp.simpledfs.common;
 import java.io.Serializable;
 
 public class DFSDataNodeRPCAddress implements Serializable{
-    private String ip, port;
+    private String ip, clientrpcport, datanoderpcport, namenoderpcport;
     public DFSDataNodeRPCAddress(){}
-    public DFSDataNodeRPCAddress(String _ip, String _port){
+    public DFSDataNodeRPCAddress(DFSDataNodeRPCAddress _origin){
+        ip = _origin.getIp();
+        clientrpcport = _origin.getPort();
+        datanoderpcport = _origin.getDatanoderpcport();
+        namenoderpcport = _origin.getNamenoderpcport();
+    }
+    public DFSDataNodeRPCAddress(String _ip, String _clientrpcport, String _datanoderpcport, String _namenoderpcport){
         ip = _ip;
-        port = _port;
+        clientrpcport = _clientrpcport;
+        datanoderpcport = _datanoderpcport;
+        namenoderpcport = _namenoderpcport;
     }
 
     public String getIp() {
@@ -19,10 +27,26 @@ public class DFSDataNodeRPCAddress implements Serializable{
     }
 
     public String getPort() {
-        return port;
+        return clientrpcport;
     }
 
     public void setPort(String port) {
-        this.port = port;
+        this.clientrpcport = port;
+    }
+
+    public String getDatanoderpcport() {
+        return datanoderpcport;
+    }
+
+    public void setDatanoderpcport(String datanoderpcport) {
+        this.datanoderpcport = datanoderpcport;
+    }
+
+    public String getNamenoderpcport() {
+        return namenoderpcport;
+    }
+
+    public void setNamenoderpcport(String namenoderpcport) {
+        this.namenoderpcport = namenoderpcport;
     }
 }

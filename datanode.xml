@@ -4,13 +4,19 @@
     <comment>数据服务器配置文件</comment>
 	<!-- RPC服务ip地址 -->
 	<entry  
-        key="ip">172.30.59.25</entry>
-	<!-- RPC服务端口号 -->
+        key="ip">172.31.150.25</entry>
+	<!-- 向客户端提供的RPC服务端口号 -->
     <entry  
-        key="port">2022</entry>
+        key="clientrpcport">2022</entry>
+	<!-- 向其他数据节点提供的RPC服务端口号 -->
+    <entry  
+        key="datanoderpcport">5022</entry>
+	<!-- 向主控节点提供的RPC服务ip地址 -->
+    <entry  
+        key="namenoderpcport">8022</entry>
 	<!-- 主控节点ip地址 -->	
     <entry  
-        key="namenodeip">172.30.59.25</entry>
+        key="namenodeip">172.31.150.25</entry>
 	<!-- 主控节点端口号 -->	
     <entry  
         key="namenodeport">2020</entry>

@@ -22,6 +22,19 @@ public class DFSINode implements Serializable {
             childInode = new HashMap<>();
     }
 
+    public static String getINodePathFromSplitPaths(String []paths){
+        String res = "";
+        for(int i = 0; i < paths.length; i ++){
+            if (i == 0){
+                res += paths[i];
+            }
+            else{
+                res += "/"+paths[i];
+            }
+        }
+        return res;
+    }
+
     public static void listDirTree(DFSINode inode, int depth){
         for(int i = 1; i < depth; i++){
             if(i != depth-1){
@@ -50,11 +63,10 @@ public class DFSINode implements Serializable {
      *         2: delete a dir
      *         0: return the exists dir INode. If not exists, return null.
      * @return method == 0 且存在该节点时返回对应DFSINode，其他情况返回null
-     * @throws RemoteException
      * @throws FileNotFoundException
      * @throws FileAlreadyExistsException
      */
-    public static DFSINode updateDFSINode(DFSINode inode, String inodePath, int method) throws RemoteException, FileNotFoundException, FileAlreadyExistsException {
+    public static DFSINode updateDFSINode(DFSINode inode, String inodePath, int method) throws FileNotFoundException, FileAlreadyExistsException {
         // 将路径分隔出各级目录来
         String[] splits;
         splits = inodePath.split(splitStr);

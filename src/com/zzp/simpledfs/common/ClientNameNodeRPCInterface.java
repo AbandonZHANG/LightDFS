@@ -9,14 +9,15 @@ import java.util.ArrayList;
 import java.util.Map;
 
 public interface ClientNameNodeRPCInterface extends Remote {
+    /**************************** 用户管理 ***********************************/
     boolean
         registerUser(String username, String password)
             throws RemoteException;
     boolean
-        unRegisterUser(String username, String password)
-            throws RemoteException, UserNotFoundException;
-    boolean
         login(String userName, String password)
+            throws RemoteException;
+    boolean
+        changePassword(String userName, String password, String newPassword)
             throws RemoteException;
     long
         getUserTotalSpace(String loginUserName)
@@ -27,24 +28,29 @@ public interface ClientNameNodeRPCInterface extends Remote {
     void
         setUserTotalSpace(String userName, long totalSpace)
             throws RemoteException, UserNotFoundException;
+
+    /**************************** 目录管理 ***********************************/
     void
         addDFSDirectory(String userName, String path)
             throws RemoteException, FileNotFoundException, FileAlreadyExistsException, UserNotFoundException;
     void
-        delDFSDirectory(String userName, String path)
+        deleteDFSDirectory(String userName, String path)
+            throws RemoteException, FileNotFoundException, UserNotFoundException;
+    void
+        clearDFSDirectory(String userName, String path)
             throws RemoteException, FileNotFoundException, UserNotFoundException;
     boolean
         ifExistsDFSINode(String userName, String path)
             throws RemoteException, UserNotFoundException;
     void
-        renameDFSFile(String userName, String filePath, String newFilePath)
+        renameDFSINode(String userName, String inodePath, String newINodeName, boolean ifFile)
             throws RemoteException, UserNotFoundException, FileNotFoundException, FileAlreadyExistsException;
     ArrayList< Map.Entry<String, DFSDataNodeRPCAddress> >
-        newDFSFileMapping(String userName, String filePath, long fileSize, int blockNum)
+        addDFSFile(String userName, String filePath, long fileSize, int blockNum)
             throws RemoteException, NotBoundException, UserNotFoundException, NoEnoughSpaceException, FileNotFoundException, FileAlreadyExistsException;
-    ArrayList< Map.Entry<String, DFSDataNodeRPCAddress> >
-        removeDFSFile(String userName, String filePath)
-            throws RemoteException, NotBoundException, UserNotFoundException, FileNotFoundException;
+    void
+        deleteDFSFile(String userName, String filePath)
+            throws RemoteException, UserNotFoundException, FileNotFoundException;
     ArrayList< Map.Entry<String, DFSDataNodeRPCAddress> >
         lookupFileBlocks(String userName, String filePath)
             throws RemoteException, NotBoundException, UserNotFoundException, FileNotFoundException;

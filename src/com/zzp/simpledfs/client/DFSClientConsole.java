@@ -247,9 +247,6 @@ public class DFSClientConsole {
         catch (RemoteException e){
             System.out.println("[LINK-ERROR!] Can't link to the NameNode!");
         }
-        catch (NotBoundException e){
-            System.out.println("[LINK-ERROR!] Can't link to the DataNode!");
-        }
         catch (UserNotFoundException e){
             System.out.println("[ERROR!] User not found!");
         }

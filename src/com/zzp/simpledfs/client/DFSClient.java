@@ -14,10 +14,12 @@ public class DFSClient {
     public static DFSClient getInstance() throws RemoteException{
         return new DFSClient();
     }
+
     private ClientNameNodeRPCInterface clientRmi;
     private String loginUserName;    // 当前登陆用户名
     private String namenodeIp, namenodePort;  // 连接的NameNode ip, port
     private int blockSize;
+
     DFSClient() throws RemoteException{
         // 读取配置文件client.xml
         readConfigFile("client.xml");
@@ -32,6 +34,7 @@ public class DFSClient {
             e.printStackTrace();
         }
     }
+
     private void readConfigFile(String file){
         Properties props = new Properties();
         try{
@@ -48,6 +51,7 @@ public class DFSClient {
         }
     }
 
+    /***************************  用户管理  *************************************/
     public boolean registerUser(String userName, String password) throws RemoteException{
         boolean res = false;
         try{
@@ -62,12 +66,6 @@ public class DFSClient {
         return res;
     }
 
-//    public boolean unRegisterUser(String userName, String password) throws RemoteException, UserNotFoundException{
-//        boolean res;
-//        res = clientRmi.unRegisterUser(userName, DFSBase64.Base64Encode(password));
-//        return res;
-//    }
-
     public boolean login(String userName, String password) throws RemoteException{
         boolean res;
         res = clientRmi.login(userName, DFSBase64.Base64Encode(password));
@@ -81,42 +79,60 @@ public class DFSClient {
         loginUserName = null;
     }
 
+    public boolean changePassword(String password, String newPassword) throws RemoteException, UserNotFoundException{
+        if(loginUserName == null)
+            throw new UserNotFoundException();
+        else
+            return clientRmi.changePassword(loginUserName, DFSBase64.Base64Encode(password), DFSBase64.Base64Encode(newPassword));
+    }
+
     public long getUserTotalSpace() throws RemoteException, UserNotFoundException{
         if(loginUserName == null)
             throw new UserNotFoundException();
         else
             return clientRmi.getUserTotalSpace(loginUserName);
     }
+
     public long getUserUsedSpace() throws RemoteException, UserNotFoundException{
         if(loginUserName == null)
             throw new UserNotFoundException();
         else
             return clientRmi.getUserUsedSpace(loginUserName);
     }
+
     public void setUserTotalSpace(long totalSpace) throws RemoteException, UserNotFoundException{
         if(loginUserName == null)
             throw new UserNotFoundException();
         else
             clientRmi.setUserTotalSpace(loginUserName, totalSpace);
     }
+
+
+    /***************************  目录管理  *************************************/
     /**
      * @param dfsPath DFS目录绝对路径
      */
-    public boolean mkdir(String dfsPath) throws RemoteException, UserNotFoundException, FileAlreadyExistsException, FileNotFoundException{
+    public void mkdir(String dfsPath) throws RemoteException, UserNotFoundException, FileAlreadyExistsException, FileNotFoundException{
         if(loginUserName == null)
             throw new UserNotFoundException();
         else{
             clientRmi.addDFSDirectory(loginUserName, dfsPath);
-            return true;
         }
     }
 
-    public boolean rmdir(String dfsPath) throws RemoteException, UserNotFoundException, FileNotFoundException{
+    public void rmdir(String dfsPath) throws RemoteException, UserNotFoundException, FileNotFoundException{
         if(loginUserName == null)
             throw new UserNotFoundException();
         else {
-            clientRmi.delDFSDirectory(loginUserName, dfsPath);
-            return true;
+            clientRmi.deleteDFSDirectory(loginUserName, dfsPath);
+        }
+    }
+
+    public void cldir(String dfsPath) throws RemoteException, UserNotFoundException, FileNotFoundException{
+        if(loginUserName == null)
+            throw new UserNotFoundException();
+        else {
+            clientRmi.clearDFSDirectory(loginUserName, dfsPath);
         }
     }
 
@@ -138,17 +154,15 @@ public class DFSClient {
         return clientRmi.getDFSINode(loginUserName, dfsPath);
     }
 
-    /**
-     * @param originPath 原DFS目录绝对路径
-     * @param newPath 新DFS目录绝对路径
-     */
-    public boolean renameFile(String originPath, String newPath) throws FileNotFoundException, UserNotFoundException, FileAlreadyExistsException, RemoteException{
+    public boolean renameDir(String originPath, String newName) throws FileNotFoundException, UserNotFoundException, FileAlreadyExistsException, RemoteException{
         if(loginUserName == null)
             throw new UserNotFoundException();
-        clientRmi.renameDFSFile(loginUserName, originPath, newPath);
+        clientRmi.renameDFSINode(loginUserName, originPath, newName, false);
         return true;
     }
 
+
+    /***************************  文件管理  *************************************/
     /**
      * @param localFilePath 本地文件绝对路径或者相对路径
      * @param dfsPath DFS目录绝对路径
@@ -162,7 +176,7 @@ public class DFSClient {
             ArrayList<byte[]> byteblocks = transToByte(localFile);
             // 向NameNode发送请求，新建Inode文件节点，分配数据块标识，分配数据节点
             // 返回数据块标识和存储数据节点
-            ArrayList<Map.Entry<String, DFSDataNodeRPCAddress> > blockDatanodes =  clientRmi.newDFSFileMapping(loginUserName, dfsPath, localFile.length(), byteblocks.size());
+            ArrayList<Map.Entry<String, DFSDataNodeRPCAddress> > blockDatanodes =  clientRmi.addDFSFile(loginUserName, dfsPath, localFile.length(), byteblocks.size());
             if(blockDatanodes == null){
                 throw new FileNotFoundException();
             }
@@ -223,23 +237,24 @@ public class DFSClient {
         }
     }
 
-    public void removeFile(String dfsPath) throws RemoteException, UserNotFoundException, FileNotFoundException, NotBoundException{
-        try{
-            // 向NameNode询问某文件的数据块标识及数据节点
-            // 返回数据块标识和存储数据节点，删除主控节点上的元数据
-            ArrayList<Map.Entry<String, DFSDataNodeRPCAddress> > blockDatanodes =  clientRmi.removeDFSFile(loginUserName, dfsPath);
-            // 删除数据节点上的数据块
-            for (Map.Entry<String, DFSDataNodeRPCAddress> blockDatanode:blockDatanodes){
-                String block = blockDatanode.getKey();
-                DFSDataNodeRPCAddress datanodeAddr = blockDatanode.getValue();
-                ClientDataNodeRPCInterface transRmi = (ClientDataNodeRPCInterface)Naming.lookup("rmi://"+datanodeAddr.getIp()+":"+datanodeAddr.getPort()+"/DFSDataNode");
-                transRmi.deleteBlock(block);
-            }
-        }
-        catch (MalformedURLException e){
-            e.printStackTrace();
-        }
+    public void removeFile(String dfsPath) throws RemoteException, UserNotFoundException, FileNotFoundException{
+        if(loginUserName == null)
+            throw new UserNotFoundException();
+        // 删除主控节点上的元数据
+        clientRmi.deleteDFSFile(loginUserName, dfsPath);
     }
+
+    /**
+     * @param originPath 原DFS目录绝对路径
+     * @param newName 新目录路径
+     */
+    public boolean renameFile(String originPath, String newName) throws FileNotFoundException, UserNotFoundException, FileAlreadyExistsException, RemoteException{
+        if(loginUserName == null)
+            throw new UserNotFoundException();
+        clientRmi.renameDFSINode(loginUserName, originPath, newName, true);
+        return true;
+    }
+
     /**
      * 读入本地文件，将字节流存在byte[]中
      * @param localFile 本地文件的绝对路径或相对路径

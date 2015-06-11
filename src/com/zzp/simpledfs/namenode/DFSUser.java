@@ -24,4 +24,7 @@ public class DFSUser implements Serializable{
     public long getTotalSpace(){
         return maxSpace;
     }
+    public void setTotalSpace(long _maxSpace){
+        maxSpace = _maxSpace;
+    }
 }

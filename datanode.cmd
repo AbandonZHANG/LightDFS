@@ -1,3 +1,3 @@
-set CLASSPATH=out\production\SimpleDFS\
-java com.zzp.simpledfs.datanode.DFSDataNodeConsole
+set CLASSPATH=out\production\LightDFS\
+java com.zzp.lightdfs.datanode.DFSDataNodeConsole
 pause

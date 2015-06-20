@@ -1,4 +1,4 @@
-package com.zzp.simpledfs.client;
+package com.zzp.lightdfs.client;
 
 import sun.misc.BASE64Decoder;
 import sun.misc.BASE64Encoder;

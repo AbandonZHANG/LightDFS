@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/SimpleDFS.iml" filepath="$PROJECT_DIR$/SimpleDFS.iml" />
+      <module fileurl="file://$PROJECT_DIR$/LightDFS.iml" filepath="$PROJECT_DIR$/LightDFS.iml" />
     </modules>
   </component>
 </project>

@@ -1,6 +1,6 @@
-package com.zzp.simpledfs.client;
+package com.zzp.lightdfs.client;
 
-import com.zzp.simpledfs.common.*;
+import com.zzp.lightdfs.common.*;
 
 import java.io.*;
 import java.net.MalformedURLException;

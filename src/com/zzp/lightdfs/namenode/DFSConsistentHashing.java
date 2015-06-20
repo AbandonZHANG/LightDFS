@@ -1,4 +1,4 @@
-package com.zzp.simpledfs.namenode;
+package com.zzp.lightdfs.namenode;
 
 import java.util.*;
 

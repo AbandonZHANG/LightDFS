@@ -1,4 +1,4 @@
-import com.zzp.simpledfs.namenode.DFSConsistentHashing;
+import com.zzp.lightdfs.namenode.DFSConsistentHashing;
 
 import java.io.BufferedWriter;
 import java.io.File;

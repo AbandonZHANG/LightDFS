@@ -1,6 +1,6 @@
-package com.zzp.simpledfs.namenode;
+package com.zzp.lightdfs.namenode;
 
-import com.zzp.simpledfs.common.*;
+import com.zzp.lightdfs.common.*;
 
 import java.io.*;
 import java.nio.file.FileAlreadyExistsException;
@@ -157,7 +157,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
             // 绑定 RMI 服务
             Naming.rebind("rmi://"+rpcIp+":"+rpcPort+"/DFSNameNode", this);
             myDataNodeMonitor = new DFSDataNodeMonitor(activeDatanodes, excludeNodes, consistentHash, blockDataNodeMappings, intervalTime);
-            //myDataNodeMonitor.start();
+            myDataNodeMonitor.start();
             System.out.println("[INFO] The NameNode is running...");
         }
         catch (Exception e){
@@ -319,6 +319,16 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
                 // 加入数据块-数据节点映射中
                 blockDataNodeMappings.put(block.getBlockName(), block);
             }
+//            if(!toDelBlocks.containsKey(datanodeID)){
+//                return;
+//            }
+//            ArrayList<String> canDel = new ArrayList<>();
+//            for(String toDelblock:toDelBlocks.get(datanodeID)){
+//                canDel.add(toDelblock);
+//            }
+//            for(String canDelBlock:canDel){
+//                toDelBlocks.remove(canDelBlock);
+//            }
         }
     }
 
@@ -334,7 +344,6 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
             consistentHash.addNode(datanode.getDatanodeID());
             // 数据迁移
             blocksTransToThisDataNode(datanode.getDatanodeID());
-            System.out.println("1");
             return true;
         }
         else{
@@ -346,15 +355,14 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
     public boolean unRegisterDataNode(String datanodeID) throws RemoteException{
         if(checkNodeConnection(datanodeID) == 2){
             // 删除数据节点下的映射
-            Iterator< Map.Entry<String, DFSBlock> > iter = blockDataNodeMappings.entrySet().iterator();
-            while(iter.hasNext()){
-                Map.Entry<String, DFSBlock> entry = iter.next();
-                if(entry.getValue().getDatanodeID().equals(datanodeID)){
-                    // 循环中删除调用Iterator的remove才是安全的
-                    iter.remove();
-                }
-            }
-
+//            Iterator< Map.Entry<String, DFSBlock> > iter = blockDataNodeMappings.entrySet().iterator();
+//            while(iter.hasNext()){
+//                Map.Entry<String, DFSBlock> entry = iter.next();
+//                if(entry.getValue().getDatanodeID().equals(datanodeID)){
+//                    // 循环中删除调用Iterator的remove才是安全的
+//                    iter.remove();
+//                }
+//            }
             // 删除一致性哈希节点
             consistentHash.removeNode(datanodeID);
             blocksTransToOtherDataNode(datanodeID);
@@ -729,7 +737,7 @@ public class DFSNameNode extends UnicastRemoteObject implements DataNodeNameNode
                 toDelFiles.add(dfsPath+DFSINode.splitStr+child.name);
             }
             else{
-                deleteFilesFromDirectory(child, dfsPath + DFSINode.splitStr + child.name);
+                fileSize += deleteFilesFromDirectory(child, dfsPath + DFSINode.splitStr + child.name);
             }
         }
         for (String toDelFilePath : toDelFiles){

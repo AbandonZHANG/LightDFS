@@ -1,6 +1,6 @@
-package com.zzp.simpledfs.namenode;
+package com.zzp.lightdfs.namenode;
 
-import com.zzp.simpledfs.common.DFSINode;
+import com.zzp.lightdfs.common.DFSINode;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -26,7 +26,7 @@ public class DFSNameNodeConsole {
         System.out.println("***************************************************************************");
         System.out.println("**                                                                       **");
         System.out.println("**                                                                       **");
-        System.out.println("**                Welcome to use SimpleDFS! (version 0.1.0)              **");
+        System.out.println("**                Welcome to use LightDFS! (version 0.1.0)              **");
         System.out.println("**                                                                       **");
         System.out.println("**                         Author: Zhipeng Zhang                         **");
         System.out.println("**                                                                       **");
@@ -77,7 +77,7 @@ public class DFSNameNodeConsole {
     }
     public void printHelp(){
         System.out.println("");
-        System.out.println("The SimpleDFS NameNode commands are:");
+        System.out.println("The LightDFS NameNode commands are:");
         System.out.println("    start         Start the server job.");
         System.out.println("    close         Close the server job.");
         System.out.println("    ls            List the DFS directory.");

@@ -1,9 +1,6 @@
-package com.zzp.simpledfs.datanode;
-
-import com.zzp.simpledfs.common.DataNodeNameNodeRPCInterface;
+package com.zzp.lightdfs.datanode;
 
 import java.io.File;
-import java.rmi.RemoteException;
 import java.util.ArrayList;
 
 public class DFSDataNodeJump extends Thread{

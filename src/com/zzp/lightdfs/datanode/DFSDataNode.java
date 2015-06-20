@@ -1,6 +1,6 @@
-package com.zzp.simpledfs.datanode;
+package com.zzp.lightdfs.datanode;
 
-import com.zzp.simpledfs.common.*;
+import com.zzp.lightdfs.common.*;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -357,6 +357,7 @@ public class DFSDataNode extends UnicastRemoteObject implements ClientDataNodeRP
             BufferedInputStream bufIn = new BufferedInputStream(new FileInputStream(theFile));
             byte[] datas = new byte[(int)theFile.length()];
             bufIn.read(datas);
+            //theFile.delete();
             bufIn.close();
             return datas;
         }

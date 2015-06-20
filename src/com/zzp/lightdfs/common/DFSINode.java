@@ -1,9 +1,8 @@
-package com.zzp.simpledfs.common;
+package com.zzp.lightdfs.common;
 
 import java.io.FileNotFoundException;
 import java.io.Serializable;
 import java.nio.file.FileAlreadyExistsException;
-import java.rmi.RemoteException;
 import java.util.HashMap;
 
 public class DFSINode implements Serializable {

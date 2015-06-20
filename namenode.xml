@@ -4,7 +4,7 @@
     <comment>主控服务器配置文件</comment>
 	<!-- RPC服务ip地址 -->
     <entry  
-        key="ip">172.31.150.25</entry>
+        key="ip">localhost</entry>
 	<!-- RPC服务端口号 -->
     <entry  
         key="port">2020</entry>

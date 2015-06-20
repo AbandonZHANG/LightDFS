@@ -1,4 +1,4 @@
-package com.zzp.simpledfs.common;
+package com.zzp.lightdfs.common;
 
 public class UserNotFoundException extends Exception {
     public UserNotFoundException(){

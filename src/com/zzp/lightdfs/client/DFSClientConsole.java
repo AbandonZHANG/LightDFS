@@ -1,8 +1,8 @@
-package com.zzp.simpledfs.client;
+package com.zzp.lightdfs.client;
 
-import com.zzp.simpledfs.common.DFSINode;
-import com.zzp.simpledfs.common.NoEnoughSpaceException;
-import com.zzp.simpledfs.common.UserNotFoundException;
+import com.zzp.lightdfs.common.DFSINode;
+import com.zzp.lightdfs.common.NoEnoughSpaceException;
+import com.zzp.lightdfs.common.UserNotFoundException;
 
 import java.io.FileNotFoundException;
 import java.nio.file.FileAlreadyExistsException;
@@ -32,7 +32,7 @@ public class DFSClientConsole {
         System.out.println("***************************************************************************");
         System.out.println("**                                                                       **");
         System.out.println("**                                                                       **");
-        System.out.println("**                Welcome to use SimpleDFS! (version 0.1.0)              **");
+        System.out.println("**                Welcome to use LightDFS! (version 0.1.0)              **");
         System.out.println("**                                                                       **");
         System.out.println("**                         Author: Zhipeng Zhang                         **");
         System.out.println("**                                                                       **");
@@ -343,7 +343,7 @@ public class DFSClientConsole {
     }
     public void printHelp(){
         System.out.println("");
-        System.out.println("The SimpleDFS Client commands are:");
+        System.out.println("The LightDFS Client commands are:");
         System.out.println("    ls [path]                         List the DFS directory.");
         System.out.println("    mkdir [path]                      Make a new DFS directory.");
         System.out.println("    rmdir [path]                      Remove a designated DFS directory.");

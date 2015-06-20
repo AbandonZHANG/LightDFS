@@ -1,4 +1,4 @@
-package com.zzp.simpledfs.datanode;
+package com.zzp.lightdfs.datanode;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -33,7 +33,7 @@ public class DFSDataNodeConsole {
     public void printHello(){
         System.out.println("***************************************************************************");
         System.out.println("**                                                                       **");
-        System.out.println("**                Welcome to use SimpleDFS! (version 0.1.0)              **");
+        System.out.println("**                Welcome to use LightDFS! (version 0.1.0)              **");
         System.out.println("**                                                                       **");
         System.out.println("**                         Author: Zhipeng Zhang                         **");
         System.out.println("**                                                                       **");

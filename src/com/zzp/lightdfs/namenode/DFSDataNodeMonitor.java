@@ -1,7 +1,7 @@
-package com.zzp.simpledfs.namenode;
+package com.zzp.lightdfs.namenode;
 
-import com.zzp.simpledfs.common.DFSBlock;
-import com.zzp.simpledfs.common.DFSDataNodeState;
+import com.zzp.lightdfs.common.DFSBlock;
+import com.zzp.lightdfs.common.DFSDataNodeState;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;

@@ -1,4 +1,4 @@
-package com.zzp.simpledfs.common;
+package com.zzp.lightdfs.common;
 
 import java.io.Serializable;
 
